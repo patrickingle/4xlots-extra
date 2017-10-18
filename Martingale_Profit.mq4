@@ -19,6 +19,15 @@
 //| 4. AllowNewTrades, when off (false) will prevent new trades after|
 //|    the existing martingale group have closed out, good for       |
 //|    letting the existing session to complete for a withdrawal     |
+//|								     |
+//|								     |
+//| Notes:							     |
+//| -----							     |
+//| During testing, a demo account was created with a leverage       |
+//| of 1000:1 and an initial deposit of $110 but then increase to    |
+//| $200, and only the single currency pair EURGBP is being traded   |
+//| on a M1 chart. Hence a minimum deposit of $200 is required to    |
+//| use this Expert Advisor. A $2000 deposit is ideal minimum.       |
 //+------------------------------------------------------------------+
 #define NL          "\n"
 #define ENDPOINT    "https://api.4xlots.com/wp-json/v1/lots_optimize"
