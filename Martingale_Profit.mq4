@@ -72,12 +72,12 @@ void OnTick() {
    int trend=2; // 0=down, 1=up, 2=reversal/unknown/limbo
    if (Close[50] < Close[100] && Close[100] < Close[150]) {
       trend = 0;
-      Print("Trend is DOWN");
+      Comment("Trend is DOWN");
    } else if (Close[50] > Close[100] && Close[100] > Close[150]) {
       trend = 1;
-      Print("Trend is UP");
+      Comment("Trend is UP");
    } else {
-      Print("Trend is UNKNOWN");
+      Comment("Trend is UNKNOWN");
    }
    
    if(orderstotal()==0 && NewBar && trend == 1 && AllowNewTrades == true) {
