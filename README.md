@@ -20,3 +20,6 @@ number only.
 
 5. Begin using 4xlots API is your Expert Advisors or other Forex trading algorithms
 
+# Preview Actual Results
+
+https://github.com/patrickingle/4xlots-extra/wiki/Detailed-Statement
