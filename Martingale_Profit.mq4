@@ -20,7 +20,7 @@
 //|    the existing martingale group have closed out, good for       |
 //|    letting the existing session to complete for a withdrawal     |
 //+------------------------------------------------------------------+
-
+#define NL          "\n"
 #define ENDPOINT    "https://api.4xlots.com/wp-json/v1/lots_optimize"
 
 extern double Deposit = 2000.0;
@@ -69,16 +69,19 @@ void OnTick() {
    }
    minsltp=MarketInfo(Symbol(),MODE_SPREAD)+MarketInfo(Symbol(),MODE_STOPLEVEL)+PipProfit;
 
+   string strTrend;
    int trend=2; // 0=down, 1=up, 2=reversal/unknown/limbo
    if (Close[50] < Close[100] && Close[100] < Close[150]) {
       trend = 0;
-      Comment("Trend is DOWN");
+      strTrend = "Trend is DOWN";
    } else if (Close[50] > Close[100] && Close[100] > Close[150]) {
       trend = 1;
-      Comment("Trend is UP");
+      strTrend = "Trend is UP";
    } else {
-      Comment("Trend is UNKNOWN");
+      strTrend = "Trend is UNKNOWN";
    }
+   
+   Comment("Account Equity: " + DoubleToString(AccountEquity()) + NL + "AccountLeverage: " + IntegerToString(AccountLeverage()) + NL + "MIN Lot Size: " + DoubleToString(MarketInfo(Symbol(),MODE_MINLOT)) + NL + "MAX Lot Size: " + DoubleToString(MarketInfo(Symbol(),MODE_MAXLOT)) + NL + "Account Profit: " + DoubleToString(AccountProfit()) + NL + NL + strTrend);
    
    if(orderstotal()==0 && NewBar && trend == 1 && AllowNewTrades == true) {
       if(minsltp==0) {
