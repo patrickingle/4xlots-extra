@@ -1,11 +1,11 @@
 # 4xlots-extra
-Extra files for use with 4xlots Forex RIsk Management Web Service, see http://4xlots.com for more information
+Extra files for use with 4xlots Forex RIsk Management Web Service, see https://4xlots.com for more information
 
 # Get Access to the 4xlots.com API for FREE!
 
 When you open a Live account at Traderways using the IB link https://www.tradersway.com/?ib=1004584,
 
-your will receive FREE access to the 4xlots.com API.
+your will receive FREE access to the api.4xlots.com API.
 
 To begin,
 
