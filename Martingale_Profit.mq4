@@ -9,28 +9,69 @@
 #property strict
 //+------------------------------------------------------------------+
 //| Usage Instructions:                                              |
-//| ------------------						     |
-//| 1. Set you Deposit, (sum of all deposits)			     |
-//| 2. Set the PipProfit, if your trade profit is possitive but	     |
+//| ------------------						                              |
+//| 1. Set you Deposit, (sum of all deposits)			               |
+//| 2. Set the PipProfit, if your trade profit is possitive but	   |
 //|    still reducing your balance because of trade commissions,     |
-//|    then increase this value to offset such expenses.	     |
+//|    then increase this value to offset such expenses.	            |
 //| 3. HedgeOnUnknownTrend, if the CCY pair is in flux, turn this on |
 //|    to create hedge trades? Account must support hedging.         |
 //| 4. AllowNewTrades, when off (false) will prevent new trades after|
 //|    the existing martingale group have closed out, good for       |
 //|    letting the existing session to complete for a withdrawal     |
-//|								     |
-//|								     |
-//| Notes:							     |
-//| -----							     |
+//|		                                       					      |
+//|								                                          |
+//| Notes:							                                       |
+//| -----							                                       |
 //| During testing, a demo account was created with a leverage       |
-//| of 1000:1 and an initial deposit of $110 but then increase to    |
-//| $200, and only the single currency pair EURGBP is being traded   |
-//| on a M1 chart. Hence a minimum deposit of $200 is required to    |
-//| use this Expert Advisor. A $2000 deposit is ideal minimum.       |
+//| of 1000:1 and an initial deposit of $110 but then increased      |
+//| periodically, and the currency pair EURGBP is being traded       |
+//| on a M1 chart. Hence a minimum deposit of $2000 is required to   |
+//| use this Expert Advisor.                                         |
+//|                                                                  |
+//| Live Testing:                                                    |
+//| ------------                                                     |
+//| Performed on a TW account with a leverage at 200:1 with an       |
+//| initial deposit of $200 produce an average of $10 profit per day.|
+//| The new margin level check prevented a castrophic margin call    |
+//| giving back acceptable profits. Unlike the Demo testing,         |
+//| additional deposits were not needed.                             |
+//|                                                                  |
+//| Simulated Testing:                                               |
+//| -----------------                                                |
+//| On the $200 demo account with 1000:1, grew the account quicker,  |
+//| to where it double every two days, but had to keep add additional|
+//| funds to the demo account (a nice feature of Traderways--to add  |
+//| additional funds to a Demo account from your Traderways Private  |
+//| Office) when the margin level drop below 200%.                   |
+//|                                                                  |
+//| MarginLevelMin: 
+//| --------------
+//| The Margin Level is an Account indicator when the account is at
+//| risk for a margin call and not monitoring this parameter
+//| is why so many Expert Advisors fail. When the Margin Level drops
+//| to 200%, it means you have too many trades opened.
+//| The MarginLevelMin parameter is our fail safe which is set higher
+//| than 200, and if we see the Margin Level drop below the
+//| MarginLevelMin value, we are going to proactively start closing
+//| out positive trades (those with a profit) until the Margin Level
+//| rises above this value. This use to be a manual operation, but
+//| now is automated. 
+//| 
+//| MaxLossForceClose: (Always a negative value)
+//| -----------------
+//| When there are no positive or in the profit trades to close out
+//| in order to restore the Margin Level to a safe level, we need to
+//| start closing out some negative trades. This is the value of the
+//| loss that is acceptable. Giving back some profits without giving
+//| back all profits and your principal.
+//| 
+//| 
 //+------------------------------------------------------------------+
 #define NL          "\n"
 #define ENDPOINT    "https://api.4xlots.com/wp-json/v1/lots_optimize"
+
+#include <4xlots.mqh>
 
 extern double Deposit = 2000.0;
 // PipProfit: Default: 5 for EURGBP
@@ -266,62 +307,3 @@ void ModifyTP(int tip,double tp)
         }
      }
   }
-//+------------------------------------------------------------------+
-//|                                                                  |
-//+------------------------------------------------------------------+
-double LotsOptimize(double deposit,int preserve)
-  {
-   string cookie=NULL,headers;
-   char post[],result[];
-   int res;
-   int timeout=5000; //--- Timeout below 1000 (1 sec.) is not enough for slow Internet connection 
-   double _lots=0.0;
-   string strResult="";
-
-   char params[];
-
-   double equity=AccountEquity();
-
-   int leverage=AccountLeverage();
-
-   double minlots = MarketInfo(Symbol(), MODE_MINLOT);
-   double maxlots = MarketInfo(Symbol(), MODE_MAXLOT);
-
-   string str="accesskey="+AccessKey;
-   str = str + "&deposit=" + DoubleToStr(deposit);
-   str = str + "&equity=" + DoubleToStr(equity);
-   str = str + "&leverage=" + IntegerToString(leverage);
-   str = str + "&minlots=" + DoubleToStr(minlots);
-   str = str + "&maxlots=" + DoubleToStr(maxlots);
-   str = str + "&preserve=" + IntegerToString(preserve);
-
-   string api_4xlots=ENDPOINT+"?"+str;
-   headers="";
-   ResetLastError();
-   res=WebRequest("GET",api_4xlots,cookie,NULL,timeout,post,0,result,headers);
-
-//--- Checking errors
-   if(res==-1) 
-     {
-      _lots=0.0;
-        } else {
-
-      for(int i=0;i<ArraySize(result);i++) 
-        {
-
-         if((result[i]==10) || (result[i]==13)) 
-           {
-            continue;
-              } else {
-            strResult+=CharToStr(result[i]);
-           }
-        }
-      //ArrayCopy(strResult,result,0,0,WHOLE_ARRAY);
-
-     }
-   _lots=StringToDouble(strResult);
-
-
-   return _lots;
-  }
-//+------------------------------------------------------------------+
