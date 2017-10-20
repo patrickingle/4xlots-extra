@@ -45,22 +45,28 @@ double LotsOptimize(double deposit,int preserve) export
    str = str + "&preserve=" + IntegerToString(preserve);
    
    string api_4xlots = ENDPOINT + "?" + str;
-   headers = "";
-   ResetLastError(); 
-   res=WebRequest("GET",api_4xlots,cookie,NULL,timeout,post,0,result,headers); 
-
-   if(res==-1) {
-      lots = 0.0;
+   
+   if (IsTesting()) {
+      string sLots = httpGET(api_4xlots);
+      lots = StringToDouble(sLots);
    } else {
-      for(int i=0;i<ArraySize(result);i++) {
-          if( (result[i] == 10) || (result[i] == 13)) {
-             continue;
-          } else {
-             strResult += CharToStr(result[i]);
-          }
+      headers = "";
+      ResetLastError(); 
+      res=WebRequest("GET",api_4xlots,cookie,NULL,timeout,post,0,result,headers); 
+
+      if(res==-1) {
+         lots = 0.0;
+      } else {
+         for(int i=0;i<ArraySize(result);i++) {
+    	     if( (result[i] == 10) || (result[i] == 13)) {
+	        continue;
+	     } else {
+	        strResult += CharToStr(result[i]);
+	     }
+         } 
       }
+      lots = StringToDouble(strResult);
    }
-   lots = StringToDouble(strResult);
    
    return lots;
 }
