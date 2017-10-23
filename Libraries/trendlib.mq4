@@ -11,6 +11,20 @@
 
 #include <trend.mqh>
 
+/*
+ * ADX > 25 => in a trend
+ * ADX.DI+ > ADX.DI- => Up Trend
+ * ADX.DI+ < ADX.DI- => Down Trend
+ * 
+ * ADX Value 	Trend Strength
+ * ---------   --------------
+ * 0-25 	      Absent or Weak Trend
+ * 25-50 	   Strong Trend
+ * 50-75 	   Very Strong Trend
+ * 75-100 	   Extremely Strong Trend
+ * 
+ */
+
 //+------------------------------------------------------------------+
 //| TrendDirection                                                   |
 //| 0=Down, 1=Up, 2=Unknown/Sideways                                 |
@@ -21,10 +35,14 @@ int TrendDirection() export
    double adx_dip = iADX(Symbol(),0,ADXPeriod,PRICE_CLOSE,MODE_PLUSDI,0);
    double adx_dim = iADX(Symbol(),0,ADXPeriod,PRICE_CLOSE,MODE_MINUSDI,0);
 
+   // Retrieve Global Variable from Price Channel Indicator,
+   //    SEE https://github.com/patrickingle/4xlots-extra/Indicators/Price Channel.mq4   
+   double price_channel = GlobalVariableGet("MidPriceChannel");
+
    if (adx > trendStrength) {
-      if (adx_dip > adx_dim && Close[PeriodLookback] < Close[0]) {
+      if (adx_dip > adx_dim && Close[PeriodLookback] < Close[0] && Close[0] > price_channel) {
          return (1);
-      } else if (adx_dip < adx_dim && Close[PeriodLookback] > Close[0]) {
+      } else if (adx_dip < adx_dim && Close[PeriodLookback] > Close[0] && Close[0] < price_channel) {
          return (0);
       }
    }
