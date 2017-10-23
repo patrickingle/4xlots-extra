@@ -14,7 +14,7 @@
 //+------------------------------------------------------------------+
 //| IsMarginLevelLessThan                                            |
 //+------------------------------------------------------------------+
-bool IsMarginLevelLessThan(double MarginLevelTest) 
+bool IsMarginLevelLessThan(double MarginLevelTest) export
 {
    double _MarginLevel = 0.0;
     
@@ -29,7 +29,7 @@ bool IsMarginLevelLessThan(double MarginLevelTest)
 //+------------------------------------------------------------------+
 //| CloseOpenOrders                                                  |
 //+------------------------------------------------------------------+
-void CloseAnOpenOrder(bool CloseNegativeOrder,double MaxLossForceClose)
+void CloseAnOpenOrder(bool CloseNegativeOrder,double MaxLossForceClose) export
 {
    for( int i = 0 ; i < OrdersTotal() ; i++ ) {
       if (OrderSelect( i, SELECT_BY_POS, MODE_TRADES ) == true) {
@@ -70,5 +70,37 @@ void CloseAnOpenOrder(bool CloseNegativeOrder,double MaxLossForceClose)
          }
       }
    }
+}
+
+//+------------------------------------------------------------------+
+//+ Break Even                                                       |
+//+------------------------------------------------------------------+
+bool BreakEven(int MagicNumber) export
+{
+   int Ticket=0;
+   
+   for(int i = OrdersTotal() - 1; i >= 0; i--) {
+      if (OrderSelect(i, SELECT_BY_POS, MODE_TRADES) == true) {
+         if (MagicNumber == 0) {
+            if(OrderSymbol() == Symbol()){
+               Ticket = OrderModify(OrderTicket(), OrderOpenPrice(), OrderOpenPrice(), OrderTakeProfit(), 0, Green);
+               if(Ticket < 0) {
+                  Print(ErrorDescription(GetLastError()));
+               }
+               break;
+            }
+         } else {
+            if(OrderSymbol() == Symbol() && OrderMagicNumber() == MagicNumber){
+               Ticket = OrderModify(OrderTicket(), OrderOpenPrice(), OrderOpenPrice(), OrderTakeProfit(), 0, Green);
+               if(Ticket < 0) {
+                  Print(ErrorDescription(GetLastError()));
+               }
+               break;
+            }
+         }
+      }
+   }
+   
+   return(Ticket);
 }
 //+------------------------------------------------------------------+

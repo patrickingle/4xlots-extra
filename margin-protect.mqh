@@ -10,6 +10,7 @@
 #import "margin-protect.ex4"
    bool IsMarginLevelLessThan(double MarginLevelTest);
    void CloseAnOpenOrder(bool CloseNegativeOrder,double MaxLossForceClose);
+   bool BreakEven(int MagicNumber);
 #import "stdlib.ex4"
    string ErrorDescription(int error_code);
    int    RGB(int red_value,int green_value,int blue_value);
