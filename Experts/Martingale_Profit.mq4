@@ -9,20 +9,20 @@
 #property strict
 //+------------------------------------------------------------------+
 //| Usage Instructions:                                              |
-//| ------------------						                              |
-//| 1. Set you Deposit, (sum of all deposits)			               |
-//| 2. Set the PipProfit, if your trade profit is possitive but	   |
+//| ------------------						     |
+//| 1. Set you Deposit, (sum of all deposits)			     |
+//| 2. Set the PipProfit, if your trade profit is possitive but	     |
 //|    still reducing your balance because of trade commissions,     |
-//|    then increase this value to offset such expenses.	            |
+//|    then increase this value to offset such expenses.	     |
 //| 3. HedgeOnUnknownTrend, if the CCY pair is in flux, turn this on |
 //|    to create hedge trades? Account must support hedging.         |
 //| 4. AllowNewTrades, when off (false) will prevent new trades after|
 //|    the existing martingale group have closed out, good for       |
 //|    letting the existing session to complete for a withdrawal     |
-//|		                                       					      |
-//|								                                          |
-//| Notes:							                                       |
-//| -----							                                       |
+//|		                                                     |
+//|								     |
+//| Notes:							     |
+//| -----							     |
 //| During testing, a demo account was created with a leverage       |
 //| of 1000:1 and an initial deposit of $110 but then increased      |
 //| periodically, and the currency pair EURGBP is being traded       |
@@ -69,18 +69,23 @@
 //| 
 //+------------------------------------------------------------------+
 #define NL          "\n"
-#define ENDPOINT    "https://api.4xlots.com/wp-json/v1/lots_optimize"
 
 #include <4xlots.mqh>
+#include <margin-protect.mqh>
+#include <trend.mqh>
 
-extern double Deposit = 2000.0;
+extern double Deposit = 200.0;
+extern int BarPosition = 20;
 // PipProfit: Default: 5 for EURGBP
 //            Change to: 20 for EURUSD, especially on small balances (<$2000)
 extern int PipProfit = 5;
+// minimum margin level before closing positive trades, when this falls to 200, a margin call is at risk
+extern double MarginLevelMin = 300;
+// maximum loss per trade user will tolertate if force close out negative trades to restore margin level to a safe leve
+extern double MaxLossForceClose = -1.00;
 extern bool HedgeOnUnknownTrend = false;
 extern bool AllowNewTrades = true;
 
-string AccessKey="[REPLACE WITH YOUR ACCESSKEY FROM 4XLOTS.COM]";
 
 int MagicNumber=20171016;
 
@@ -89,6 +94,8 @@ double minsltp;
 
 int ThisBarTrade=0;
 bool NewBar;
+
+double MarginLevel;
 //+------------------------------------------------------------------+
 //| Expert initialization function                                   |
 //+------------------------------------------------------------------+
@@ -112,26 +119,69 @@ void OnDeinit(const int reason)
 //| Expert tick function                                             |
 //+------------------------------------------------------------------+
 void OnTick() {
+   static int previous_trend = 0;
+   
    if (Bars!=ThisBarTrade) {
-      NewBar=true;
+      // Get the last Trade Bar
       ThisBarTrade=Bars;
+      // This is a NewBar that ha not been tested/traded
       NewBar=true;
    }
    minsltp=MarketInfo(Symbol(),MODE_SPREAD)+MarketInfo(Symbol(),MODE_STOPLEVEL)+PipProfit;
 
    string strTrend;
-   int trend=2; // 0=down, 1=up, 2=reversal/unknown/limbo
-   if (Close[50] < Close[100] && Close[100] < Close[150]) {
-      trend = 0;
-      strTrend = "Trend is DOWN";
-   } else if (Close[50] > Close[100] && Close[100] > Close[150]) {
-      trend = 1;
-      strTrend = "Trend is UP";
-   } else {
-      strTrend = "Trend is UNKNOWN";
+   static int trend=2; // 0=down, 1=up, 2=reversal/unknown/limbo
+
+   trend = TrendDirection();
+   strTrend = TrendDescription(trend);
+   
+   if (trend == 2) {
+      NewBar=false;
+   } else if (trend == 3) {
+      NewBar=false;
+   } else if (trend == 4) {
+      NewBar=false;
    }
    
-   Comment("Account Equity: " + DoubleToString(AccountEquity()) + NL + "AccountLeverage: " + IntegerToString(AccountLeverage()) + NL + "MIN Lot Size: " + DoubleToString(MarketInfo(Symbol(),MODE_MINLOT)) + NL + "MAX Lot Size: " + DoubleToString(MarketInfo(Symbol(),MODE_MAXLOT)) + NL + "Account Profit: " + DoubleToString(AccountProfit()) + NL + NL + strTrend);
+   
+   // if the trend change, then close opened positive orders and take your profit
+   if (trend != previous_trend) {
+      Print("Trend change, closing out positive trades");
+      previous_trend = trend;
+      CloseOpenOrders(false);
+   }
+      
+   Comment( "Account Equity: " + DoubleToString(AccountEquity()) + NL + "AccountLeverage: " + IntegerToString(AccountLeverage()) + NL + "MIN Lot Size: " + DoubleToString(MarketInfo(Symbol(),MODE_MINLOT)) + NL + "MAX Lot Size: " + DoubleToString(MarketInfo(Symbol(),MODE_MAXLOT)) + NL + "Account Profit: " + DoubleToString(AccountProfit()) + NL + NL + strTrend);
+
+   // Check MarginLevel when there are trades?
+   static bool notified_margin_level_low = false;
+   static bool notified_margin_level_safe = false;
+   if (AccountMargin() > 0) {
+      MarginLevel = CalculateMarginLevel();
+      if (MarginLevel <= MarginLevelMin) {
+         if (notified_margin_level_low == false) {
+            Print("Margin Level is below minimum threshold");
+            notified_margin_level_low = true;
+            notified_margin_level_safe = false;
+         }
+         AllowNewTrades = false;
+         TP = RestoreSafeMarginLevel("Martingale Profit-"+IntegerToString(__LINE__),MagicNumber,TP,minsltp,lots);
+      } else {
+         if (notified_margin_level_safe == false) {
+            Print("Margin Level back at SAFE levels");
+            notified_margin_level_safe = true;
+            notified_margin_level_low = false;
+         }
+         AllowNewTrades = true;
+      }
+   }
+   
+   // Auto Adjust MaxLossForceClose to be 10% of the AccountProfit, e.g. if AP=1.98, then MaxLossForceClose=-0.19
+   double adjMaxLossForceClose = (MathAbs(AccountProfit()) / 10) * -1;
+   if (adjMaxLossForceClose < MaxLossForceClose) {
+      MaxLossForceClose = adjMaxLossForceClose;
+   }
+   
    
    if(orderstotal()==0 && NewBar && trend == 1 && AllowNewTrades == true) {
       if(minsltp==0) {
@@ -142,83 +192,71 @@ void OnTick() {
       lots=LotsOptimize(Deposit,false); //Lots;
       if(lots<MarketInfo(Symbol(),MODE_MINLOT)) lots=MarketInfo(Symbol(),MODE_MINLOT);
       if(lots>MarketInfo(Symbol(),MODE_MAXLOT)) lots=MarketInfo(Symbol(),MODE_MAXLOT);
-      buy=OrderSend(Symbol(),OP_BUY,lots,NormalizeDouble(Ask,Digits),30,0,NormalizeDouble(TP,Digits),"Buy",MagicNumber,0,clrBlue);
+      buy=OrderSend(Symbol(),OP_BUY,lots,NormalizeDouble(Ask,Digits),30,0,NormalizeDouble(TP,Digits),"Martingale Profit-"+IntegerToString(__LINE__),MagicNumber,0,clrBlue);
       NewBar=false;
    }
 
    if(orderstotal()==0 && NewBar && trend == 0 && AllowNewTrades == true) {
-      if(minsltp==0){TP=0;}else{TP=Bid-minsltp*Point;}
+      if (minsltp==0) {
+         TP=0;
+      } else{
+         TP=Bid-minsltp*Point;
+      }
       lots=LotsOptimize(Deposit,false);
       if(lots<MarketInfo(Symbol(),MODE_MINLOT))lots=MarketInfo(Symbol(),MODE_MINLOT);
       if(lots>MarketInfo(Symbol(),MODE_MAXLOT))lots=MarketInfo(Symbol(),MODE_MAXLOT);
-      sell=OrderSend(Symbol(),OP_SELL,lots,NormalizeDouble(Bid,Digits),30,0,NormalizeDouble(TP,Digits),"Sell",MagicNumber,0,clrRed);
+      sell=OrderSend(Symbol(),OP_SELL,lots,NormalizeDouble(Bid,Digits),30,0,NormalizeDouble(TP,Digits),"Martingale Profit-"+IntegerToString(__LINE__),MagicNumber,0,clrRed);
       NewBar=false;
    }
    
    if (HedgeOnUnknownTrend == true) {
-      if (orderstotal()==0 && NewBar && trend == 2) {
+      if (orderstotal()==0 && trend == 2) {
          lots=LotsOptimize(Deposit,false);
          if(lots<MarketInfo(Symbol(),MODE_MINLOT))lots=MarketInfo(Symbol(),MODE_MINLOT);
          if(lots>MarketInfo(Symbol(),MODE_MAXLOT))lots=MarketInfo(Symbol(),MODE_MAXLOT);
          if(minsltp==0) {TP=0;} else {TP=Ask+minsltp*Point;}
-         buy=OrderSend(Symbol(),OP_BUY,lots,NormalizeDouble(Ask,Digits),30,0,NormalizeDouble(TP,Digits),"Buy",MagicNumber,0,clrBlue);
+         buy=OrderSend(Symbol(),OP_BUY,lots,NormalizeDouble(Ask,Digits),30,0,NormalizeDouble(TP,Digits),"Martingale Profit-"+IntegerToString(__LINE__),MagicNumber,0,clrBlue);
          if(minsltp==0){TP=0;}else{TP=Bid-minsltp*Point;}
-         sell=OrderSend(Symbol(),OP_SELL,lots,NormalizeDouble(Bid,Digits),30,0,NormalizeDouble(TP,Digits),"Sell",MagicNumber,0,clrRed);
-         NewBar=false;
+         sell=OrderSend(Symbol(),OP_SELL,lots,NormalizeDouble(Bid,Digits),30,0,NormalizeDouble(TP,Digits),"Martingale Profit-"+IntegerToString(__LINE__),MagicNumber,0,clrRed);
+         //NewBar=false;
       }
    }
 
-   if(LastType()=="BUY" && LastPrice(OP_BUY)>Close[1] && Close[1]<Open[1] && NewBar) {
+   if(LastPrice(OP_BUY, MagicNumber)>Close[1] && Close[1]<Open[1] && NewBar) {
       lots=LotsOptimize(Deposit,false); //lots*multiplier;
       if(lots<MarketInfo(Symbol(),MODE_MINLOT))lots=MarketInfo(Symbol(),MODE_MINLOT);
       if(lots>MarketInfo(Symbol(),MODE_MAXLOT))lots=MarketInfo(Symbol(),MODE_MAXLOT);
-      TP=Ask+((MathAbs(ProfitMoney())/(TotalLots()+lots))*Point)+minsltp*Point;
-      ModifyTP(OP_BUY,TP);
-      
-         if(AccountFreeMarginCheck(Symbol(),OP_BUY,lots)<=0 || GetLastError()==134) {
-         } else if (trend == 1) {
-            buy=OrderSend(Symbol(),OP_BUY,NormalizeDouble(lots,2),NormalizeDouble(Ask,Digits),30,0,NormalizeDouble(TP,Digits),"Buy",MagicNumber,0,clrBlue);
-            NewBar=false;
-         } else if (trend == 0) {
-            TP=Bid-((MathAbs(ProfitMoney())/(TotalLots()+lots))*Point)-minsltp*Point;
-            sell=OrderSend(Symbol(),OP_SELL,NormalizeDouble(lots,2),NormalizeDouble(Bid,Digits),30,0,NormalizeDouble(TP,Digits),"Sell",MagicNumber,0,clrRed);
-            NewBar=false;
-         }
+      TP=Ask+((MathAbs(ProfitMoney(MagicNumber))/(TotalLots(MagicNumber)+lots))*Point)+minsltp*Point;
+      ModifyTP(OP_BUY,TP,MagicNumber);
+      if(AccountFreeMarginCheck(Symbol(),OP_BUY,lots)<=0 || GetLastError()==134 || AllowNewTrades == false) {
+      } else if (trend == 1) {
+         buy=OrderSend(Symbol(),OP_BUY,NormalizeDouble(lots,2),NormalizeDouble(Ask,Digits),30,0,NormalizeDouble(TP,Digits),"Martingale Profit-"+IntegerToString(__LINE__),MagicNumber,0,clrBlue);
+      } else if (trend == 0) {
+         TP=Bid-((MathAbs(ProfitMoney(MagicNumber))/(TotalLots(MagicNumber)+lots))*Point)-minsltp*Point;
+         sell=OrderSend(Symbol(),OP_SELL,NormalizeDouble(lots,2),NormalizeDouble(Bid,Digits),30,0,NormalizeDouble(TP,Digits),"Martingale Profit-"+IntegerToString(__LINE__),MagicNumber,0,clrRed);
+      }
+      NewBar = false;
    }
 
-   if(LastType()=="SELL" && LastPrice(OP_SELL)<Close[1] && Close[1]>Open[1] && NewBar) {
+   if(LastPrice(OP_SELL,MagicNumber)<Close[1] && Close[1]>Open[1] && NewBar) {
       lots=LotsOptimize(Deposit,false); //lots*multiplier;
       if(lots<MarketInfo(Symbol(),MODE_MINLOT))lots=MarketInfo(Symbol(),MODE_MINLOT);
       if(lots>MarketInfo(Symbol(),MODE_MAXLOT))lots=MarketInfo(Symbol(),MODE_MAXLOT);
-      TP=Bid-((MathAbs(ProfitMoney())/(TotalLots()+lots))*Point)-minsltp*Point;
-      ModifyTP(OP_SELL,TP);
-       if(AccountFreeMarginCheck(Symbol(),OP_SELL,lots)<=0 || GetLastError()==134) {
+      TP=Bid-((MathAbs(ProfitMoney(MagicNumber))/(TotalLots(MagicNumber)+lots))*Point)-minsltp*Point;
+      ModifyTP(OP_SELL,TP,MagicNumber);
+       if(AccountFreeMarginCheck(Symbol(),OP_SELL,lots)<=0 || GetLastError()==134 || AllowNewTrades == false) {
        } else if (trend == 0) {
-         sell=OrderSend(Symbol(),OP_SELL,NormalizeDouble(lots,2),NormalizeDouble(Bid,Digits),30,0,NormalizeDouble(TP,Digits),"Sell",MagicNumber,0,clrRed);
-         NewBar=false;
+         sell=OrderSend(Symbol(),OP_SELL,NormalizeDouble(lots,2),NormalizeDouble(Bid,Digits),30,0,NormalizeDouble(TP,Digits),"Martingale Profit-"+IntegerToString(__LINE__),MagicNumber,0,clrRed);
        } else if (trend == 1) {
-         TP=Ask+((MathAbs(ProfitMoney())/(TotalLots()+lots))*Point)+minsltp*Point;
-         buy=OrderSend(Symbol(),OP_BUY,NormalizeDouble(lots,2),NormalizeDouble(Ask,Digits),30,0,NormalizeDouble(TP,Digits),"Buy",MagicNumber,0,clrBlue);
-         NewBar=false;
+         TP=Ask+((MathAbs(ProfitMoney(MagicNumber))/(TotalLots(MagicNumber)+lots))*Point)+minsltp*Point;
+         buy=OrderSend(Symbol(),OP_BUY,NormalizeDouble(lots,2),NormalizeDouble(Ask,Digits),30,0,NormalizeDouble(TP,Digits),"Martingale Profit-"+IntegerToString(__LINE__),MagicNumber,0,clrBlue);
        }
+       NewBar=false;
    }
    
-   if (orderstotal() > MaxOpenTrades) {
-      // stop new trades
-      //NewBar = false;
-   } else {
-      // permit new trades
-      //NewBar = true;
-   }
-   
-   if ((AccountEquity() * 2) > Deposit) {
-      // Account equity is twice the Deposit, then close all trades
-      
-   }
-   
-
 }
 //+------------------------------------------------------------------+
+
 int orderstotal()
   {
    int cnt=0;
@@ -233,77 +271,9 @@ int orderstotal()
    return(cnt);
   }
 //***************************//
-double ProfitMoney()
-  {
-   double cnt=0;
-   for(int i=0;i<OrdersTotal();i++)
-     {
-      if(OrderSelect(i,SELECT_BY_POS,MODE_TRADES))
-         if(OrderSymbol()==Symbol() && MagicNumber==OrderMagicNumber())
-           {
-            cnt+=OrderProfit();
-           }
-     }
-   return(cnt);
-  }
-//***************************//
-double TotalLots()
-  {
-   double cnt=0;
-   for(int i=0;i<OrdersTotal();i++)
-     {
-      if(OrderSelect(i,SELECT_BY_POS,MODE_TRADES))
-         if(OrderSymbol()==Symbol() && MagicNumber==OrderMagicNumber())
-           {
-            cnt+=OrderLots();
-           }
-     }
-   return(cnt);
-  }
-//***************************//
-string LastType()
-  {
-   string cnt="None";
-   for(int i=OrdersTotal();i>=0;i--)
-     {
-      if(OrderSelect(i,SELECT_BY_POS,MODE_TRADES))
-         if(OrderSymbol()==Symbol() && MagicNumber==OrderMagicNumber())
-           {
-            if(OrderType()==OP_BUY)return("BUY");
-            if(OrderType()==OP_SELL)return("SELL");
-           }
-     }
-   return(cnt);
-  }
-//============ 
-double LastPrice(int tip)
-  {
-   double cnt=0;
-   for(int i=OrdersTotal();i>=0;i--)
-     {
-      if(OrderSelect(i,SELECT_BY_POS,MODE_TRADES))
-         if(OrderSymbol()==Symbol() && MagicNumber==OrderMagicNumber() && OrderType()==tip)
-           {
-            return(OrderOpenPrice());
-           }
-     }
-   return(cnt);
-  }
-//======
-void ModifyTP(int tip,double tp)
-  {
-   for(int i=0; i<OrdersTotal(); i++)
-     {
-      if(OrderSelect(i,SELECT_BY_POS,MODE_TRADES))
-        {
-         if(OrderSymbol()==Symbol() && OrderMagicNumber()==MagicNumber && OrderType()==tip)
-           {
-            if(NormalizeDouble(OrderTakeProfit(),Digits)!=NormalizeDouble(tp,Digits))
-              {
-               move=OrderModify(OrderTicket(),OrderOpenPrice(),OrderStopLoss(),NormalizeDouble(tp,Digits),0,clrGold);
-              }
-           }
 
-        }
-     }
-  }
+
+
+
+
+//+------------------------------------------------------------------+
