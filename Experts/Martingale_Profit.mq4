@@ -183,7 +183,7 @@ void OnTick() {
    }
    
    
-   if(orderstotal()==0 && NewBar && trend == 1 && AllowNewTrades == true) {
+   if(TotalOrders(MagicNumber)==0 && NewBar && trend == 1 && AllowNewTrades == true) {
       if(minsltp==0) {
          TP=0;
       } else {
@@ -196,7 +196,7 @@ void OnTick() {
       NewBar=false;
    }
 
-   if(orderstotal()==0 && NewBar && trend == 0 && AllowNewTrades == true) {
+   if(TotalOrders(MagicNumber)==0 && NewBar && trend == 0 && AllowNewTrades == true) {
       if (minsltp==0) {
          TP=0;
       } else{
@@ -210,7 +210,7 @@ void OnTick() {
    }
    
    if (HedgeOnUnknownTrend == true) {
-      if (orderstotal()==0 && trend == 2) {
+      if (TotalOrders(MagicNumber)==0 && trend == 2) {
          lots=LotsOptimize(Deposit,false);
          if(lots<MarketInfo(Symbol(),MODE_MINLOT))lots=MarketInfo(Symbol(),MODE_MINLOT);
          if(lots>MarketInfo(Symbol(),MODE_MAXLOT))lots=MarketInfo(Symbol(),MODE_MAXLOT);
@@ -255,25 +255,4 @@ void OnTick() {
    }
    
 }
-//+------------------------------------------------------------------+
-
-int orderstotal()
-  {
-   int cnt=0;
-   for(int i=0;i<OrdersTotal();i++)
-     {
-      if(OrderSelect(i,SELECT_BY_POS,MODE_TRADES))
-         if(OrderSymbol()==Symbol() && MagicNumber==OrderMagicNumber())
-           {
-            cnt++;
-           }
-     }
-   return(cnt);
-  }
-//***************************//
-
-
-
-
-
 //+------------------------------------------------------------------+

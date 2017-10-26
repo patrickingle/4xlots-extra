@@ -19,6 +19,7 @@
    string LastType(int MagicNumber);
    double LastPrice(int tip,int MagicNumber);
    void ModifyTP(int tip,double tp,int MagicNumber);
+   int TotalOrders(int MagicNumber);
 #import "stdlib.ex4"
    string ErrorDescription(int error_code);
    int    RGB(int red_value,int green_value,int blue_value);

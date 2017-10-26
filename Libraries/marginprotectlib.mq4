@@ -335,6 +335,23 @@ void ModifyTP(int tip,double tp,int MagicNumber) export
         }
      }
 }
+
+//+------------------------------------------------------------------+
+//| TotalOrders                                                      |
+//+------------------------------------------------------------------+
+int TotalOrders(int MagicNumber) export
+{
+   int cnt=0;
+   for(int i=0;i<OrdersTotal();i++)
+     {
+      if(OrderSelect(i,SELECT_BY_POS,MODE_TRADES))
+         if(OrderSymbol()==Symbol() && MagicNumber==OrderMagicNumber())
+           {
+            cnt++;
+           }
+     }
+   return(cnt);
+}
   
   
 //+------------------------------------------------------------------+
