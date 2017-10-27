@@ -66,7 +66,18 @@
 //| loss that is acceptable. Giving back some profits without giving
 //| back all profits and your principal.
 //| 
-//| 
+//| Updates
+//| -------
+//| With the updated trend library validating a trend using three
+//| indicators had made this a safer Martingale by only trading on a
+//| confirm trend. Sideways and Breakouts will not be trade sessions.
+//|
+//| Live Testing
+//| ------------
+//| On a Tradersway ECN account with 200:1 Leverage and a deposit
+//| of $100 on both the EURUSD and EURGDP on the M1 chart. The results
+//| stop the crazy Martingale trades and only on a Strong trend to
+//| produce a $2 average daily profit. 
 //+------------------------------------------------------------------+
 #define NL          "\n"
 
@@ -74,7 +85,6 @@
 #include <margin-protect.mqh>
 #include <trend.mqh>
 
-extern double Deposit = 200.0;
 extern int BarPosition = 20;
 // PipProfit: Default: 5 for EURGBP
 //            Change to: 20 for EURUSD, especially on small balances (<$2000)

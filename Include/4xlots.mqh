@@ -11,6 +11,8 @@
 //+------------------------------------------------------------------+
 #define ENDPOINT    "https://api.4xlots.com/wp-json/v1/lots_optimize"
 
+extern double Deposit=200;
+extern bool Preserve=false;
 extern string AccessKey="[REPLACE WITH YOUR ACCESSKEY FROM 4XLOTS.COM]";
 extern int LeverageOverride=200;
 extern double MaxLossForceClose = -1.00;
