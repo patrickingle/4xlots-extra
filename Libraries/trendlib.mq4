@@ -31,7 +31,7 @@
 //+------------------------------------------------------------------+
 int TrendDirection() export
 {
-   static int trend;
+   static Trend trend;
    
    double adx = iADX(Symbol(),0,ADXPeriod,PRICE_CLOSE,MODE_MAIN,0);
    double adx_dip = iADX(Symbol(),0,ADXPeriod,PRICE_CLOSE,MODE_PLUSDI,0);
@@ -43,9 +43,9 @@ int TrendDirection() export
       double price_channel = GlobalVariableGet("MidPriceChannel");
       
       if (adx_dip > adx_dim && Close[PeriodLookback] < Close[0] && Close[0] > price_channel) {
-         trend = 1;
+         trend = UP;
       } else if (adx_dip < adx_dim && Close[PeriodLookback] > Close[0] && Close[0] < price_channel) {
-         trend = 0;
+         trend = DOWN;
       }
    } else {
       double stdev_band = GlobalVariableGet("StdDevBand");
@@ -53,11 +53,11 @@ int TrendDirection() export
       double upper_band = GlobalVariableGet("UpperBand");
       
       if (High[0] < lower_band || Low[0] < lower_band) {
-         trend = 3;
+         trend = BREAKOUT_DOWN;
       } else if (High[0] > upper_band || Low[0] > upper_band) {
-         trend = 4;
+         trend = BREAKOUT_UP;
       } else {
-         trend = 2;
+         trend = UNKNOWN;
       }
    }
    
@@ -67,22 +67,22 @@ int TrendDirection() export
 //+------------------------------------------------------------------+
 //| TrendDescription                                                 |
 //+------------------------------------------------------------------+
-string TrendDescription(int trend_direction) export
+string TrendDescription(Trend direction) export
 {
-   switch(trend_direction) {
-      case 0: // Down
+   switch(direction) {
+      case DOWN:
          return ("Trend is DOWN");
          break;
-      case 1: // Up
+      case UP:
          return ("Trend is UP");
          break;
-      case 2: // Unknown
+      case UNKNOWN:
          return ("Trend is UNKNOWN");
          break;
-      case 3: // breakout UP
+      case BREAKOUT_UP:
          return ("Breakout on UP");
          break;
-      case 4: // breakout DOWN
+      case BREAKOUT_DOWN:
          return ("Breakout on DOWN");
          break;
    }
