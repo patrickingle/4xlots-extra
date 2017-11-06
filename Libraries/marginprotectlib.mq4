@@ -1,5 +1,5 @@
 //+------------------------------------------------------------------+
-//|                                               margin-protect.mq4 |
+//|                                             marginprotectlib.mq4 |
 //|                                  Copyright 2017, PHK Corporation |
 //|                                               https://4xlots.com |
 //+------------------------------------------------------------------+
@@ -10,14 +10,6 @@
 #property strict
 
 #include <margin-protect.mqh>
-
-//+------------------------------------------------------------------+
-//| CalculateMinMarginLevel                                          |
-//+------------------------------------------------------------------+
-double CalculateMinMarginLevel() export
-{
-   return (AccountBalance() + AccountLeverage());
-}
 
 //+------------------------------------------------------------------+
 //| CalculateMarginLevel                                             |
@@ -51,7 +43,7 @@ bool IsMarginLevelLessThan(double MarginLevelTest) export
 //+------------------------------------------------------------------+
 //| CloseAnOpenOrder                                                 |
 //+------------------------------------------------------------------+
-void CloseAnOpenOrder(bool CloseNegativeOrder,double MaxLossForceClose) export
+void CloseAnOpenOrder(bool CloseNegativeOrder) export
 {
    for( int i = 0 ; i < OrdersTotal() ; i++ ) {
       if (OrderSelect( i, SELECT_BY_POS, MODE_TRADES ) == true) {
@@ -97,7 +89,7 @@ void CloseAnOpenOrder(bool CloseNegativeOrder,double MaxLossForceClose) export
 //+------------------------------------------------------------------+
 //| CloseOpenOrders                                                  |
 //+------------------------------------------------------------------+
-void CloseOpenOrders(bool closeNegativeOrders=true,int multiplier=2,double MaxLossForceClose=1) export
+void CloseOpenOrders(bool closeNegativeOrders=true,int multiplier=2) export
 {
    int closed_positive_orders = 0;
  
@@ -179,12 +171,12 @@ bool BreakEven(int MagicNumber) export
 //+------------------------------------------------------------------+
 //| RestoreSafeMarginLevel                                           |
 //+------------------------------------------------------------------+
-double RestoreSafeMarginLevel(string comment,int magic,double TP,double minsltp,double lots,double MaxLossForceClose) export
+double RestoreSafeMarginLevel(string comment,int magic,double TP,double minsltp,double lots) export
 {
    if (TradesSkewed() == true) {
       return CheckOpenHedgeTrade(comment,magic,TP,minsltp,lots);
    } else {
-      CloseOpenOrders(true,2,MaxLossForceClose);
+      CloseOpenOrders();
    }
    
    return (TP);

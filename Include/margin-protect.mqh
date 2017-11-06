@@ -7,14 +7,21 @@
 #property link      "https://4xlots.com"
 #property strict
 
+// minimum margin level before closing positive trades, 
+// when this falls to 200, a margin call is at risk
+extern double MarginLevelMin = 300;
+// maximum loss per trade user will tolertate if force close out 
+// negative trades to restore margin level to a safe leve
+extern double MaxLossForceClose = -1.00;
+
 #import "marginprotectlib.ex4"
    double CalculateMinMarginLevel();
    double CalculateMarginLevel();
    bool IsMarginLevelLessThan(double MarginLevelTest);
    void CloseAnOpenOrder(bool CloseNegativeOrder,double MaxLossForceClose);
-   void CloseOpenOrders(bool closeNegativeOrders=true,int multiplier=2,double MaxLossForceClose=1.0);
+   void CloseOpenOrders(bool closeNegativeOrders=true,int multiplier=2);
    bool BreakEven(int MagicNumber);
-   double RestoreSafeMarginLevel(string comment,int magic,double TP,double minsltp,double lots,double MaxLossForceClos);
+   double RestoreSafeMarginLevel(string comment,int magic,double TP,double minsltp,double lots);
    double ProfitMoney(int MagicNumber);
    double TotalLots(int MagicNumber);
    string LastType(int MagicNumber);
