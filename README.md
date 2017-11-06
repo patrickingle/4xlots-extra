@@ -1,6 +1,16 @@
 # 4xlots-extra
 Extra files for use with 4xlots Forex RIsk Management Web Service, see https://4xlots.com for more information
 
+# Relevance List of Files
+
+    Libraries/4xlotslib.mq4 = the library for 4xlots REST API
+    Libraries/marginprotectlib.mq4 = useful functions for checking margin level percentage, <200% risks margin call)
+    Libraries/trailingstop.mq4 = functions to automatically add trailing stops to an open trade
+    Libraries/trendlib.mq4 = trending functions using multiple indicators to detect and confirm a trend,
+
+    Indicators/Bands.mq4 = modified indicator with Global parameters used by the trendlib.mq4
+    Indicators/Price Channel.mq4 = modified indicator with Global parameters used by the trendlib.mq4
+    
 # Get Access to the 4xlots.com API for FREE!
 
 When you open a Live account at Traderways using the IB link https://www.tradersway.com/?ib=1004584,

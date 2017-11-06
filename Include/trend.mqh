@@ -25,10 +25,10 @@ enum Trend
 
 extern int PeriodLookback = 200;
 extern int ADXPeriod = 20;
-extern TrendStrength trendStrength=VeryStrong;
+extern TrendStrength trendStrength=Strong;
 
 #import "trendlib.ex4"
    int TrendDirection();
-   string TrendDescription(int trend_direction);
+   string TrendDescription(Trend direction);
 #import
 //+------------------------------------------------------------------+
