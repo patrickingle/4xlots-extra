@@ -8,12 +8,13 @@
 #property strict
 
 #import "marginprotectlib.ex4"
+   double CalculateMinMarginLevel();
    double CalculateMarginLevel();
    bool IsMarginLevelLessThan(double MarginLevelTest);
    void CloseAnOpenOrder(bool CloseNegativeOrder,double MaxLossForceClose);
    void CloseOpenOrders(bool closeNegativeOrders=true,int multiplier=2,double MaxLossForceClose=1.0);
    bool BreakEven(int MagicNumber);
-   double RestoreSafeMarginLevel(string comment,int magic,double TP,double minsltp,double lots);
+   double RestoreSafeMarginLevel(string comment,int magic,double TP,double minsltp,double lots,double MaxLossForceClos);
    double ProfitMoney(int MagicNumber);
    double TotalLots(int MagicNumber);
    string LastType(int MagicNumber);

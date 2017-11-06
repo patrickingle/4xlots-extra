@@ -12,6 +12,14 @@
 #include <margin-protect.mqh>
 
 //+------------------------------------------------------------------+
+//| CalculateMinMarginLevel                                          |
+//+------------------------------------------------------------------+
+double CalculateMinMarginLevel() export
+{
+   return (AccountBalance() + AccountLeverage());
+}
+
+//+------------------------------------------------------------------+
 //| CalculateMarginLevel                                             |
 //+------------------------------------------------------------------+
 double CalculateMarginLevel() export
@@ -171,12 +179,12 @@ bool BreakEven(int MagicNumber) export
 //+------------------------------------------------------------------+
 //| RestoreSafeMarginLevel                                           |
 //+------------------------------------------------------------------+
-double RestoreSafeMarginLevel(string comment,int magic,double TP,double minsltp,double lots) export
+double RestoreSafeMarginLevel(string comment,int magic,double TP,double minsltp,double lots,double MaxLossForceClose) export
 {
    if (TradesSkewed() == true) {
       return CheckOpenHedgeTrade(comment,magic,TP,minsltp,lots);
    } else {
-      CloseOpenOrders();
+      CloseOpenOrders(true,2,MaxLossForceClose);
    }
    
    return (TP);
