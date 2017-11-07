@@ -32,7 +32,7 @@ number only.
 
 # Results
 
-File: Results/DetailedStatement-20171107.pdf
+File: <a href="Results/DetailedStatement-20171107.pdf">Results/DetailedStatement-20171107.pdf</a>
 
 A very aggressive Martingale EA was acquired and I like the strategy that this EA was using but the original developer
 didn't include much thought in Risk Management specifically lots size and margin level detection that 
