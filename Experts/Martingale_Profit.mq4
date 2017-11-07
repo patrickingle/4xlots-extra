@@ -66,7 +66,39 @@
 //| loss that is acceptable. Giving back some profits without giving
 //| back all profits and your principal.
 //| 
-//| 
+//| Updates
+//| -------
+//| With the updated trend library validating a trend using three
+//| indicators had made this a safer Martingale by only trading on a
+//| confirm trend. Sideways and Breakouts will not be trade sessions.
+//|
+//| Live Testing
+//| ------------
+//| On a Tradersway ECN account with 200:1 Leverage and a deposit
+//| of $100 on both the EURUSD and EURGDP on the M1 chart. The results
+//| stop the crazy Martingale trades and only on a Strong trend to
+//| produce a $2 average daily profit. 
+//|
+//| Installation
+//| ------------
+//| Download the Bands and Price Channel indicators from
+//| https://github.com/patrickingle/4xlots-extra/Indicators
+//| and install in your Indicators path of your Metatrade 4 Terminal, re-compile.
+//|
+//| Download these libraries and their assoicated include files:
+//|     4xlotslib, marginprotectlib, trendlib, trailingstoplib
+//|
+//| Install in the Libraries and Includes path of your Metatrade 4 Terminal, re-compile.
+//|
+//| Download the Martingale Profit Expert Advisor and install in the
+//| Experts directory of your Metatrader 4 Terminal, re-compile.
+//|
+//| Open the Daily currency pair chart, (recommendations: USDCHF, EURUSD, GBPEUR)
+//| Attach the Bands and Price Channel indicator to the chart 
+//| Attach the Martingal Profit Expert Advisor to the chart ensure Live trading and DLL's
+//|      are enabled
+//| Turn on Auto Trading
+/// Monitor results
 //+------------------------------------------------------------------+
 #define NL          "\n"
 
@@ -74,15 +106,10 @@
 #include <margin-protect.mqh>
 #include <trend.mqh>
 
-extern double Deposit = 350.0;
 extern int BarPosition = 20;
 // PipProfit: Default: 5 for EURGBP
 //            Change to: 20 for EURUSD, especially on small balances (<$2000)
 extern int PipProfit = 10;
-// minimum margin level before closing positive trades, when this falls to 200, a margin call is at risk
-extern double MarginLevelMin = 300;
-// maximum loss per trade user will tolertate if force close out negative trades to restore margin level to a safe leve
-extern double MaxLossForceClose = -1.00;
 extern bool HedgeOnUnknownTrend = false;
 extern bool AllowNewTrades = true;
 
@@ -158,7 +185,6 @@ void OnTick() {
    static bool notified_margin_level_safe = false;
    if (AccountMargin() > 0) {
       MarginLevel = CalculateMarginLevel();
-      MarginLevelMin = CalculateMinMarginLevel();
       if (MarginLevel <= MarginLevelMin) {
          if (notified_margin_level_low == false) {
             Print("Margin Level is below minimum threshold of ",DoubleToString(MarginLevelMin));
@@ -166,7 +192,7 @@ void OnTick() {
             notified_margin_level_safe = false;
          }
          AllowNewTrades = false;
-         TP = RestoreSafeMarginLevel("Martingale Profit-"+IntegerToString(__LINE__),MagicNumber,TP,minsltp,lots,MaxLossForceClose);
+         TP = RestoreSafeMarginLevel("Martingale Profit-"+IntegerToString(__LINE__),MagicNumber,TP,minsltp,lots);
       } else {
          if (notified_margin_level_safe == false) {
             Print("Margin Level back at SAFE levels");
@@ -180,8 +206,8 @@ void OnTick() {
    // Auto Adjust MaxLossForceClose to be 10% of the AccountProfit, e.g. if AP=1.98, then MaxLossForceClose=-0.19
    double adjMaxLossForceClose = (MathAbs(AccountProfit()) / 10) * -1;
    if (adjMaxLossForceClose < MaxLossForceClose) {
-      Print("Max loss to force close is adjusted to ",DoubleToString(adjMaxLossForceClose));
       MaxLossForceClose = adjMaxLossForceClose;
+      Print("Max loss to force close is adjusted to ",DoubleToString(adjMaxLossForceClose));
    }
    
    
