@@ -28,7 +28,7 @@ extern int ADXPeriod = 20;
 extern TrendStrength trendStrength=Strong;
 
 #import "trendlib.ex4"
-   int TrendDirection();
+   Trend TrendDirection();
    string TrendDescription(Trend direction);
 #import
 //+------------------------------------------------------------------+

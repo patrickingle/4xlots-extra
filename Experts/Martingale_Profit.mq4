@@ -146,7 +146,7 @@ void OnDeinit(const int reason)
 //| Expert tick function                                             |
 //+------------------------------------------------------------------+
 void OnTick() {
-   static int previous_trend = 0;
+   static Trend previous_trend = UNKNOWN;
    
    if (Bars!=ThisBarTrade) {
       // Get the last Trade Bar
@@ -157,16 +157,16 @@ void OnTick() {
    minsltp=MarketInfo(Symbol(),MODE_SPREAD)+MarketInfo(Symbol(),MODE_STOPLEVEL)+PipProfit;
 
    string strTrend;
-   static int trend=2; // 0=down, 1=up, 2=reversal/unknown/limbo
+   static Trend trend=UNKNOWN; // 0=down, 1=up, 2=reversal/unknown/limbo, 3=Breakout UP, 4=Breakout Down
 
    trend = TrendDirection();
    strTrend = TrendDescription(trend);
    
-   if (trend == 2) {
+   if (trend == UNKNOWN) {
       NewBar=false;
-   } else if (trend == 3) {
+   } else if (trend == BREAKOUT_UP) {
       NewBar=false;
-   } else if (trend == 4) {
+   } else if (trend == BREAKOUT_DOWN) {
       NewBar=false;
    }
    
@@ -185,6 +185,7 @@ void OnTick() {
    static bool notified_margin_level_safe = false;
    if (AccountMargin() > 0) {
       MarginLevel = CalculateMarginLevel();
+      MarginLevelMin = CalculateMinMarginLevel();
       if (MarginLevel <= MarginLevelMin) {
          if (notified_margin_level_low == false) {
             Print("Margin Level is below minimum threshold of ",DoubleToString(MarginLevelMin));

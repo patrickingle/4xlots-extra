@@ -29,7 +29,7 @@
 //| TrendDirection                                                   |
 //| 0=Down, 1=Up, 2=Unknown/Sideways, 3=Breakout-UP, 4=Breakout-DN   |
 //+------------------------------------------------------------------+
-int TrendDirection() export
+Trend TrendDirection() export
 {
    static Trend trend;
    
