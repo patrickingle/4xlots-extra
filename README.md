@@ -56,4 +56,5 @@ The following publication, "Using the 4XLots Web Service: A tool for risk manage
 Amazon at http://www.amazon.com/dp/B00D4765AU shows how to implement 4XLots API in your own Expert Advisor.
 
 [Book Cover of Using the 4XLots Web Service: A tool for risk management in forex trading](Images/B00D4765AU.jpg)
+<img src="Images/B00D4765AU.jpg">
 
