@@ -1,5 +1,5 @@
 //+------------------------------------------------------------------+
-//|                                             marginprotectlib.mq4 |
+//|                                              marginprotectlib.mq4 |
 //|                                  Copyright 2017, PHK Corporation |
 //|                                               https://4xlots.com |
 //+------------------------------------------------------------------+
@@ -10,6 +10,14 @@
 #property strict
 
 #include <margin-protect.mqh>
+
+//+------------------------------------------------------------------+
+//| CalculateMinMarginLevel                                          |
+//+------------------------------------------------------------------+
+double CalculateMinMarginLevel() export
+{
+   return (AccountBalance() + AccountLeverage());
+}
 
 //+------------------------------------------------------------------+
 //| CalculateMarginLevel                                             |
