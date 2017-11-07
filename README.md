@@ -55,5 +55,5 @@ an equity retirement account (after taxes are paid).
 The following publication, "Using the 4XLots Web Service: A tool for risk management in forex trading" available on
 Amazon at http://www.amazon.com/dp/B00D4765AU shows how to implement 4XLots API in your own Expert Advisor.
 
-<img src="https://images-na.ssl-images-amazon.com/images/I/51Aw-wQS7LL.jpg">
+[Book Cover of Using the 4XLots Web Service: A tool for risk management in forex trading](Images/B00D4765AU.jpg)
 
