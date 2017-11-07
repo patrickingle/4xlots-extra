@@ -30,17 +30,6 @@ number only.
 
 5. Begin using 4xlots API is your Expert Advisors or other Forex trading algorithms
 
-# Preview Actual Results
-
-https://github.com/patrickingle/4xlots-extra/wiki/Detailed-Statement
-
-# Publication
-
-The following publication, "Using the 4XLots Web Service: A tool for risk management in forex trading" available on
-Amazon at http://www.amazon.com/dp/B00D4765AU shows how to implement 4XLots API in your own Expert Advisor.
-
-<img src="https://images-na.ssl-images-amazon.com/images/I/51Aw-wQS7LL.jpg">
-
 # Results
 
 File: Results/DetailedStatement-20171107.pdf
@@ -59,4 +48,12 @@ ONLY USE DISCRETIONARY INCOME THAT YOU CAN AFFORD TO LOOSE AND DON'T ACT GREEDY!
 
 Forex will return better than expected returns, and from these returns, you can further fund
 an equity retirement account (after taxes are paid).
+
+
+# Publication
+
+The following publication, "Using the 4XLots Web Service: A tool for risk management in forex trading" available on
+Amazon at http://www.amazon.com/dp/B00D4765AU shows how to implement 4XLots API in your own Expert Advisor.
+
+<img src="https://images-na.ssl-images-amazon.com/images/I/51Aw-wQS7LL.jpg">
 
