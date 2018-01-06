@@ -13,10 +13,32 @@
 #include <margin-protect.mqh>
 
 extern bool AllowNewTrades = true;
-extern double Profit = 1.00;
-extern int PipProfit = 10;
+extern double DailyTargetProfit = 1.00;
 
+double PipProfit   = 10.0;
 double MarginLevel = 0.0;
+
+//+------------------------------------------------------------------+
+//| INSTRUCTIONS:
+//| ------------
+//| When switching between Accounts, turn off the Expert before switching
+//| otherwise, you could inadvertently open multiple trades on the
+//| new account.
+//|
+//| This Expert Advisor is designed to permit a single open trade at a time
+//| allowing to be attached to multiple currency pairs.
+//|
+//| Ideally, the target is earn at least $1 per day, but if your trades
+//| are taking longer to close, you may want to reduce the DailyTargetProfit
+//| amount.
+//|
+//| If you want to turn trading on selected currency pairs without
+//| removing the Expert Advsior, just set the AllowNewTrades to FALSE.
+//| This does not stop closing out the open trades or the margin protect
+//| algorithm from functioning.
+//|
+//+------------------------------------------------------------------+
+
 
 //+------------------------------------------------------------------+
 //| Expert initialization function                                   |
@@ -47,7 +69,7 @@ void OnTick()
   {
 //---
    static Trend trend=UNKNOWN; // 0=down, 1=up, 2=reversal/unknown/limbo
-   double profit = Profit;
+   double profit = DailyTargetProfit;
 
    if (OrdersTotal() == 0 && AllowNewTrades == true) {
       trend = TrendDirection();
@@ -206,6 +228,7 @@ void OnTick()
             notified_margin_level_safe = false;
          }
          AllowNewTrades = false;
+         PipProfit = NormalizeDouble(DailyTargetProfit * 100, Digits);
          double lots = LotsOptimize(Deposit, false);
          double minsltp=MarketInfo(Symbol(),MODE_SPREAD)+MarketInfo(Symbol(),MODE_STOPLEVEL)+PipProfit;
          RestoreSafeMarginLevel("Restoring Safe Margin Level",0,0,minsltp,lots);
