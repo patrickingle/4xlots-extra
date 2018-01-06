@@ -3,6 +3,8 @@ Extra files for use with 4xlots Forex RIsk Management Web Service, see https://4
 
 # Relevance List of Files
 
+    Experts/DollarPerDay.mq4 = an Expert Advisor that trades on the trend using trendlib and 4xlotslib with marginprotectlib
+
     Libraries/4xlotslib.mq4 = the library for 4xlots REST API
     Libraries/marginprotectlib.mq4 = useful functions for checking margin level percentage, <200% risks margin call)
     Libraries/trailingstop.mq4 = functions to automatically add trailing stops to an open trade
