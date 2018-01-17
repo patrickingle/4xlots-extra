@@ -19,6 +19,7 @@ extern bool MarginProtect = false;
 extern bool EnableSL = true;
 extern double RiskPercent = 0.5; // 0.5%
 extern int WaitBeforeNextTrade = 5000;
+extern bool PermitAdditionalTrades = true;
 
 double PipProfit   = 10.0;
 double MarginLevel = 0.0;
@@ -300,10 +301,16 @@ void OnTick()
                      // automatically adjusted when profit raises back up and resets to 1 when profit is greater than -$2.
                      double ccyProfit = ProfitMoney(0);
                      //Print("CCY Profit: ", MathAbs((int)ccyProfit/2));
-                     if (ccyProfit < -4.00) {
+                     // TODO: needs to be scalable, when the balance/equity/lots are large, an instant open trade
+                     //       can trigger this action to open more trades and dangeriously risking the account
+                     //       for a margin call. e.g. a 1 lot trade at opening could produce a -$10 profit,
+                     //       hence invoking this action to open 3 more trades of equal quantity.
+                     //       Currently safe as long as lot size stay at 0.01 but 4xlots will automatically increase the
+                     //       lots as the equity increases to the MAX LOTS per account.
+                     if (ccyProfit < -4.00 && PermitAdditionalTrades == true) {
                         MaxTradesPerCurrencyPair = (int)MathAbs((int)ccyProfit/2);
                         //Print("Max Trades changed: ", MaxTradesPerCurrencyPair);
-                     } else if (ccyProfit < -2.00) {
+                     } else if (ccyProfit < -2.00 && PermitAdditionalTrades == true) {
                         MaxTradesPerCurrencyPair = 2;
                      } else {
                         MaxTradesPerCurrencyPair = 1;
