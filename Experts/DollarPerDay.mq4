@@ -230,10 +230,12 @@ void OnTick()
                      if (OrderStopLoss() == 0.0) {
                         double SL = OrderStopLoss();
                         if (OrderModify(OrderTicket(),OrderOpenPrice(),NormalizeDouble(High[0]+(SL * 100 * Point),Digits),OrderTakeProfit(),0) == true) {
+                           Sleep(WaitBeforeNextTrade);
                         }
                      } else {
                         // Trend is same direction as Trade, then remove the Stop Loos
                         if (OrderModify(OrderTicket(),OrderOpenPrice(),0.0,OrderTakeProfit(),0) == true) {
+                           Sleep(WaitBeforeNextTrade);
                         }
                      }
                      // Trend reverse during an open trade, desire to close in Profit ASAP
@@ -244,10 +246,12 @@ void OnTick()
                      if (OrderStopLoss() == 0.0) {
                         double SL = AccountEquity() * (RiskPercent / 100);
                         if (OrderModify(OrderTicket(),OrderOpenPrice(),NormalizeDouble(Low[0]-(SL * 100 * Point),Digits),OrderTakeProfit(),0) == true) {
+                           Sleep(WaitBeforeNextTrade);
                         }
                      } else {
                         // Trend is same direction as Trade, then remove the Stop Loos
                         if (OrderModify(OrderTicket(),OrderOpenPrice(),0.0,OrderTakeProfit(),0) == true) {
+                           Sleep(WaitBeforeNextTrade);
                         }
                      }
                      // Trend reverse during an open trade, desire to close in Profit ASAP
