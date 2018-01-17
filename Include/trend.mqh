@@ -21,6 +21,8 @@ enum Trend
    UNKNOWN=3,
    BREAKOUT_UP=4,
    BREAKOUT_DOWN=5,
+   COUNTER_UP=6,
+   COUNTER_DOWN=7,
 };
 
 extern int PeriodLookback = 200;

@@ -12,6 +12,7 @@ Extra files for use with 4xlots Forex RIsk Management Web Service, see https://4
 
     Indicators/Bands.mq4 = modified indicator with Global parameters used by the trendlib.mq4
     Indicators/Price Channel.mq4 = modified indicator with Global parameters used by the trendlib.mq4
+    Indicators/Pivot Points v4.mq4 = modified indicator with Global parameters used by the trendlib.mq4
     
 # Get Access to the 4xlots.com API for FREE!
 

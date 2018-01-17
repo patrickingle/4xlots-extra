@@ -13,10 +13,16 @@
 #include <margin-protect.mqh>
 
 extern bool AllowNewTrades = true;
-extern double DailyTargetProfit = 1.00;
+extern int MaxTradesPerCurrencyPair = 1; // number of trades permitted per currency pair
+extern double TradeProfit = 0.5; // Profit per trade over costs
+extern bool MarginProtect = false;
+extern bool EnableSL = true;
+extern double RiskPercent = 0.5; // 0.5%
+extern int WaitBeforeNextTrade = 5000;
 
 double PipProfit   = 10.0;
 double MarginLevel = 0.0;
+bool momentum_high = false;
 
 //+------------------------------------------------------------------+
 //| INSTRUCTIONS:
@@ -37,6 +43,30 @@ double MarginLevel = 0.0;
 //| This does not stop closing out the open trades or the margin protect
 //| algorithm from functioning.
 //|
+//| Currency Pairs Tested: EURUSD, USDJPY, EURGPY, GBPJPY, USDCAD
+//| With $100 deposit, use a maximum of 5 currency pairs 
+//|
+//| Indicators Required:
+//| -------------------
+//| Using the M1 chart,
+//| Bands
+//| Price Channel
+//| Pivot Points v4
+//|
+//|
+//| Currency Pairs -CAUTION
+//| -----------------------
+//| The following currency pairs should be traded with caution, because
+//| during testing they produced large swings and a large negative 
+//| balance.
+//|
+//| USDJPY, EURJPY
+//|
+//| Currency Pairs - RECOMMENDED
+//| ----------------------------
+//| The following currency pairs appeared safe trading during testing.
+//|
+//| EURUSD, GBPJPY, USDCAD, AUDCAD
 //+------------------------------------------------------------------+
 
 
@@ -69,19 +99,33 @@ void OnTick()
   {
 //---
    static Trend trend=UNKNOWN; // 0=down, 1=up, 2=reversal/unknown/limbo
-   double profit = DailyTargetProfit;
+   double profit = TradeProfit;
 
-   if (OrdersTotal() == 0 && AllowNewTrades == true) {
+   // Check Momentum, if >100 OR <99.95, then stop NEW trades
+   double momentum = iMomentum(Symbol(),0,100,PRICE_CLOSE,0);
+   if (momentum > 100) {
+      AllowNewTrades = false;
+      if (momentum_high == false) {
+         Comment("Momentum is high, new trades suspended");
+         momentum_high = true;
+      }
+   } else {
+      momentum_high = false;
+   }
+   
+
+   if (TotalOrders(0) < MaxTradesPerCurrencyPair && AllowNewTrades == true) {
       trend = TrendDirection();
       
       double lots = LotsOptimize(Deposit, false);
-      Print("Lots=",lots);
+      //Print("Lots=",lots);
       if (lots == 0.0) {
          lots = MarketInfo(Symbol(),MODE_MINLOT);
       }
       double tp = 0.0;
       int ticket = 0;
       
+      Comment("Trend: ",TrendDescription(trend));
    
       switch (trend) {
          case DOWN:
@@ -91,6 +135,7 @@ void OnTick()
                   // Take Profit is the dollar value of $1 over cost, the TP * 100 * Point formats to the currency price
                   double TP = profit + MathAbs(OrderCommission())+MathAbs(OrderSwap());
                   if (OrderModify(ticket,OrderOpenPrice(),OrderStopLoss(),NormalizeDouble(OrderOpenPrice()-(TP * 100 * Point),Digits),0) == true) {
+                     Sleep(WaitBeforeNextTrade);
                   }
                }
                // Don't permit new trades once there is an open trade
@@ -104,6 +149,7 @@ void OnTick()
                   // Take Profit is the dollar value of $1 over cost, the TP * 100 * Point formats to the currency price
                   double TP = profit + MathAbs(OrderCommission())+MathAbs(OrderSwap());
                   if (OrderModify(ticket,OrderOpenPrice(),OrderStopLoss(),NormalizeDouble(OrderOpenPrice()+(TP * 100 * Point),Digits),0) == true) {
+                     Sleep(WaitBeforeNextTrade);
                   }
                }
                // Don't permit new trades once there is an open trade
@@ -117,6 +163,7 @@ void OnTick()
                   // Take Profit is the dollar value of $1 over cost, the TP * 100 * Point formats to the currency price
                   double TP = profit + MathAbs(OrderCommission())+MathAbs(OrderSwap());
                   if (OrderModify(ticket,OrderOpenPrice(),OrderStopLoss(),NormalizeDouble(OrderOpenPrice()+(TP * 100 * Point),Digits),0) == true) {
+                     Sleep(WaitBeforeNextTrade);
                   }
                }
                // Don't permit new trades once there is an open trade
@@ -130,6 +177,35 @@ void OnTick()
                   // Take Profit is the dollar value of $1 over cost, the TP * 100 * Point formats to the currency price
                   double TP = profit + MathAbs(OrderCommission())+MathAbs(OrderSwap());
                   if (OrderModify(ticket,OrderOpenPrice(),OrderStopLoss(),NormalizeDouble(OrderOpenPrice()-(TP * 100 * Point),Digits),0) == true) {
+                     Sleep(WaitBeforeNextTrade);
+                  }
+               }
+               // Don't permit new trades once there is an open trade
+               AllowNewTrades = false;
+            }
+            break;
+         case COUNTER_UP:
+            ticket = OrderSend(Symbol(),OP_BUY,lots,Ask,0,0.0,0.0,"Open Counter Buy Order");
+            if (ticket != -1) {
+               if (OrderSelect(ticket,SELECT_BY_TICKET) == true) {
+                  // Take Profit is the dollar value of $1 over cost, the TP * 100 * Point formats to the currency price
+                  double TP = profit + MathAbs(OrderCommission())+MathAbs(OrderSwap());
+                  if (OrderModify(ticket,OrderOpenPrice(),OrderStopLoss(),NormalizeDouble(OrderOpenPrice()+(TP * 100 * Point),Digits),0) == true) {
+                     Sleep(WaitBeforeNextTrade);
+                  }
+               }
+               // Don't permit new trades once there is an open trade
+               AllowNewTrades = false;
+            }
+            break;
+         case COUNTER_DOWN:
+            ticket = OrderSend(Symbol(),OP_SELL,lots,Bid,0,0.0,0.0,"Open Counter Sell Order");
+            if (ticket != -1) {
+               if (OrderSelect(ticket,SELECT_BY_TICKET) == true) {
+                  // Take Profit is the dollar value of $1 over cost, the TP * 100 * Point formats to the currency price
+                  double TP = profit + MathAbs(OrderCommission())+MathAbs(OrderSwap());
+                  if (OrderModify(ticket,OrderOpenPrice(),OrderStopLoss(),NormalizeDouble(OrderOpenPrice()-(TP * 100 * Point),Digits),0) == true) {
+                     Sleep(WaitBeforeNextTrade);
                   }
                }
                // Don't permit new trades once there is an open trade
@@ -147,41 +223,51 @@ void OnTick()
             if (OrderSymbol() == Symbol()) {
                // Default minimum profit is $1 over costs(commission) plus swap
                double minProfit = profit + MathAbs(OrderCommission()) + MathAbs(OrderSwap());
-               if (OrderComment() == "Open Sell Order") {
-                  if (trend == UP || trend == BREAKOUT_UP) {
+               //Print("MinProfit: ",minProfit,", Current Profit: ",OrderProfit());
+               if (OrderComment() == "Open Sell Order" || OrderComment() == "Open Breakout Sell Order" || OrderComment() == "Open Counter Sell Order") {
+                  if (trend == UP || trend == BREAKOUT_UP || trend == COUNTER_UP) {
+                     if (OrderStopLoss() == 0.0) {
+                        double SL = OrderStopLoss();
+                        if (OrderModify(OrderTicket(),OrderOpenPrice(),NormalizeDouble(High[0]+(SL * 100 * Point),Digits),OrderTakeProfit(),0) == true) {
+                        }
+                     } else {
+                        // Trend is same direction as Trade, then remove the Stop Loos
+                        if (OrderModify(OrderTicket(),OrderOpenPrice(),0.0,OrderTakeProfit(),0) == true) {
+                        }
+                     }
                      // Trend reverse during an open trade, desire to close in Profit ASAP
                      minProfit = MathAbs(OrderCommission()) + MathAbs(OrderSwap());
                   }
-               } else if (OrderComment() == "Open Buy Order") {
-                  if (trend == DOWN || trend == BREAKOUT_DOWN) {
-                     // Trend reverse during an open trade, desire to close in Profit ASAP
-                     minProfit = MathAbs(OrderCommission()) + MathAbs(OrderSwap());
-                  }
-               } else if (OrderComment() == "Open Breakout Buy Order") {
-                  if (trend == DOWN || trend == BREAKOUT_DOWN) {
-                     // Trend reverse during an open trade, desire to close in Profit ASAP
-                     minProfit = MathAbs(OrderCommission()) + MathAbs(OrderSwap());
-                  }
-               } else if (OrderComment() == "Open Breakout Sell Order") {
-                  if (trend == UP || trend == BREAKOUT_UP) {
+               } else if (OrderComment() == "Open Buy Order" || OrderComment() == "Open Breakout Buy Order" || OrderComment() == "Open Counter Buy Order") {
+                  if (trend == DOWN || trend == BREAKOUT_DOWN || trend == COUNTER_DOWN) {
+                     if (OrderStopLoss() == 0.0) {
+                        double SL = AccountEquity() * (RiskPercent / 100);
+                        if (OrderModify(OrderTicket(),OrderOpenPrice(),NormalizeDouble(Low[0]-(SL * 100 * Point),Digits),OrderTakeProfit(),0) == true) {
+                        }
+                     } else {
+                        // Trend is same direction as Trade, then remove the Stop Loos
+                        if (OrderModify(OrderTicket(),OrderOpenPrice(),0.0,OrderTakeProfit(),0) == true) {
+                        }
+                     }
                      // Trend reverse during an open trade, desire to close in Profit ASAP
                      minProfit = MathAbs(OrderCommission()) + MathAbs(OrderSwap());
                   }
                }
-
+               //Print("Updated MinProfit: ",minProfit,", Current Profit: ",OrderProfit());
                if (OrderProfit() > minProfit) {
                   if (OrderType() == OP_BUY) {
                      if (OrderClose(OrderTicket(),OrderLots(),Bid,0) == true) {
                         // Permit new trades after open trades have been closed.
-                        AllowNewTrades = true;
+                        AllowNewTrades = !momentum_high;
                      }
                   } else if (OrderType() == OP_SELL) {
                      if (OrderClose(OrderTicket(),OrderLots(),Ask,0) == true) {
                         // Permit new trades after open trades have been closed.
-                        AllowNewTrades = true;
+                        AllowNewTrades = !momentum_high;
                      }
                   }
                } else {
+                  // OrderProfit has not reach minProfit.
                   datetime gmt = TimeGMT();
                   MqlDateTime GMT; 
                   TimeToStruct(gmt,GMT); 
@@ -191,7 +277,7 @@ void OnTick()
                   if (GMT.day_of_week == 5 && last_hour == 16) {
                      // If the day is Friday and in the last hour of 4 p.m.,
                      // close out all trades in a profit above costs ONLY
-                     if (OrderProfit() > MathAbs(OrderCommission()+OrderSwap())) {
+                     if (OrderProfit() > (MathAbs(OrderCommission())+MathAbs(OrderSwap()))) {
                         if (OrderType() == OP_BUY) {
                            if (OrderClose(OrderTicket(),OrderLots(),Bid,0) == true) {
                               // Don't permit new trades in the last hour on Friday after open trades have been closed.
@@ -208,6 +294,21 @@ void OnTick()
                      // Minimum not met, let's wait? Meanwhile, margin-protect library will monitoy
                      // the margin level and only close out trades forcibly if the margin level
                      // drops below safe levels - SEE BELOW
+                     
+                     // Check of OrderProfit > $2, then increase MaxOrders by OrderProfit/2
+                     // Each time the OrderProfit descrease by a factor of $2, the max trades per currency is increased by one.
+                     // automatically adjusted when profit raises back up and resets to 1 when profit is greater than -$2.
+                     double ccyProfit = ProfitMoney(0);
+                     //Print("CCY Profit: ", MathAbs((int)ccyProfit/2));
+                     if (ccyProfit < -4.00) {
+                        MaxTradesPerCurrencyPair = (int)MathAbs((int)ccyProfit/2);
+                        //Print("Max Trades changed: ", MaxTradesPerCurrencyPair);
+                     } else if (ccyProfit < -2.00) {
+                        MaxTradesPerCurrencyPair = 2;
+                     } else {
+                        MaxTradesPerCurrencyPair = 1;
+                     }
+                     AllowNewTrades = !momentum_high;
                   }
                }
             }
@@ -215,10 +316,11 @@ void OnTick()
       }
    }
    
+   
    // Check MarginLevel when there are trades?
    static bool notified_margin_level_low = false;
    static bool notified_margin_level_safe = true;
-   if (AccountMargin() > 0) {
+   if (AccountMargin() > 0 && MarginProtect == true) {
       MarginLevel = CalculateMarginLevel();
       MarginLevelMin = CalculateMinMarginLevel();
       if (MarginLevel <= MarginLevelMin) {
@@ -228,7 +330,7 @@ void OnTick()
             notified_margin_level_safe = false;
          }
          AllowNewTrades = false;
-         PipProfit = NormalizeDouble(DailyTargetProfit * 100, Digits);
+         PipProfit = NormalizeDouble(TradeProfit * 100, Digits);
          double lots = LotsOptimize(Deposit, false);
          double minsltp=MarketInfo(Symbol(),MODE_SPREAD)+MarketInfo(Symbol(),MODE_STOPLEVEL)+PipProfit;
          RestoreSafeMarginLevel("Restoring Safe Margin Level",0,0,minsltp,lots);
@@ -246,8 +348,8 @@ void OnTick()
    double adjMaxLossForceClose = (MathAbs(AccountProfit()) / 10) * -1;
    if (adjMaxLossForceClose < MaxLossForceClose) {
       MaxLossForceClose = adjMaxLossForceClose;
-      Print("Max loss to force close is adjusted to ",DoubleToString(adjMaxLossForceClose));
-   }
+      //Print("Max loss to force close is adjusted to ",DoubleToString(adjMaxLossForceClose));
+   }   
    
   }
 //+------------------------------------------------------------------+
