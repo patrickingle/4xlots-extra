@@ -20,6 +20,12 @@ extern bool EnableSL = true;
 extern double RiskPercent = 0.5; // 0.5%
 extern int WaitBeforeNextTrade = 5000;
 extern bool PermitAdditionalTrades = true;
+extern bool EnableBUY = false;
+extern bool EnableSELL = false;
+extern bool EnableBreakOutBUY = false;
+extern bool EnableBreakOutSELL = false;
+extern bool EnableCounterBUY = true;
+extern bool EnableCounterSELL = true;
 
 double PipProfit   = 10.0;
 double MarginLevel = 0.0;
@@ -68,6 +74,14 @@ bool momentum_high = false;
 //| The following currency pairs appeared safe trading during testing.
 //|
 //| EURUSD, GBPJPY, USDCAD, AUDCAD
+//|
+//|
+//| Discovery:
+//| Counter Buy and Sell Orders has the fewer losses
+//| Buy and Sells had the most losses
+//| Breakout Buy had more losses then Breakout Sell
+//|
+//|
 //+------------------------------------------------------------------+
 
 
@@ -130,87 +144,99 @@ void OnTick()
    
       switch (trend) {
          case DOWN:
-            ticket = OrderSend(Symbol(),OP_SELL,lots,Bid,0,0.0,0.0,"Open Sell Order");
-            if (ticket != -1) {
-               if (OrderSelect(ticket,SELECT_BY_TICKET) == true) {
-                  // Take Profit is the dollar value of $1 over cost, the TP * 100 * Point formats to the currency price
-                  double TP = profit + MathAbs(OrderCommission())+MathAbs(OrderSwap());
-                  if (OrderModify(ticket,OrderOpenPrice(),OrderStopLoss(),NormalizeDouble(OrderOpenPrice()-(TP * 100 * Point),Digits),0) == true) {
-                     Sleep(WaitBeforeNextTrade);
+            if (EnableSELL == true) {
+               ticket = OrderSend(Symbol(),OP_SELL,lots,Bid,0,0.0,0.0,"Open Sell Order");
+               if (ticket != -1) {
+                  if (OrderSelect(ticket,SELECT_BY_TICKET) == true) {
+                     // Take Profit is the dollar value of $1 over cost, the TP * 100 * Point formats to the currency price
+                     double TP = profit + MathAbs(OrderCommission())+MathAbs(OrderSwap());
+                     if (OrderModify(ticket,OrderOpenPrice(),OrderStopLoss(),NormalizeDouble(OrderOpenPrice()-(TP * 100 * Point),Digits),0) == true) {
+                        Sleep(WaitBeforeNextTrade);
+                     }
                   }
+                  // Don't permit new trades once there is an open trade
+                  AllowNewTrades = false;
                }
-               // Don't permit new trades once there is an open trade
-               AllowNewTrades = false;
             }
             break;
          case UP:
-            ticket = OrderSend(Symbol(),OP_BUY,lots,Ask,0,0.0,0.0,"Open Buy Order");
-            if (ticket != -1) {
-               if (OrderSelect(ticket,SELECT_BY_TICKET) == true) {
-                  // Take Profit is the dollar value of $1 over cost, the TP * 100 * Point formats to the currency price
-                  double TP = profit + MathAbs(OrderCommission())+MathAbs(OrderSwap());
-                  if (OrderModify(ticket,OrderOpenPrice(),OrderStopLoss(),NormalizeDouble(OrderOpenPrice()+(TP * 100 * Point),Digits),0) == true) {
-                     Sleep(WaitBeforeNextTrade);
+            if (EnableBUY == true) {
+               ticket = OrderSend(Symbol(),OP_BUY,lots,Ask,0,0.0,0.0,"Open Buy Order");
+               if (ticket != -1) {
+                  if (OrderSelect(ticket,SELECT_BY_TICKET) == true) {
+                     // Take Profit is the dollar value of $1 over cost, the TP * 100 * Point formats to the currency price
+                     double TP = profit + MathAbs(OrderCommission())+MathAbs(OrderSwap());
+                     if (OrderModify(ticket,OrderOpenPrice(),OrderStopLoss(),NormalizeDouble(OrderOpenPrice()+(TP * 100 * Point),Digits),0) == true) {
+                        Sleep(WaitBeforeNextTrade);
+                     }
                   }
+                  // Don't permit new trades once there is an open trade
+                  AllowNewTrades = false;
                }
-               // Don't permit new trades once there is an open trade
-               AllowNewTrades = false;
             }
             break;
          case BREAKOUT_DOWN:
-            ticket = OrderSend(Symbol(),OP_BUY,lots,Ask,0,0.0,0.0,"Open Breakout Buy Order");
-            if (ticket != -1) {
-               if (OrderSelect(ticket,SELECT_BY_TICKET) == true) {
-                  // Take Profit is the dollar value of $1 over cost, the TP * 100 * Point formats to the currency price
-                  double TP = profit + MathAbs(OrderCommission())+MathAbs(OrderSwap());
-                  if (OrderModify(ticket,OrderOpenPrice(),OrderStopLoss(),NormalizeDouble(OrderOpenPrice()+(TP * 100 * Point),Digits),0) == true) {
-                     Sleep(WaitBeforeNextTrade);
+            if (EnableBreakOutBUY == true) {
+               ticket = OrderSend(Symbol(),OP_BUY,lots,Ask,0,0.0,0.0,"Open Breakout Buy Order");
+               if (ticket != -1) {
+                  if (OrderSelect(ticket,SELECT_BY_TICKET) == true) {
+                     // Take Profit is the dollar value of $1 over cost, the TP * 100 * Point formats to the currency price
+                     double TP = profit + MathAbs(OrderCommission())+MathAbs(OrderSwap());
+                     if (OrderModify(ticket,OrderOpenPrice(),OrderStopLoss(),NormalizeDouble(OrderOpenPrice()+(TP * 100 * Point),Digits),0) == true) {
+                        Sleep(WaitBeforeNextTrade);
+                     }
                   }
+                  // Don't permit new trades once there is an open trade
+                  AllowNewTrades = false;
                }
-               // Don't permit new trades once there is an open trade
-               AllowNewTrades = false;
             }
             break;
          case BREAKOUT_UP:
-            ticket = OrderSend(Symbol(),OP_SELL,lots,Bid,0,0.0,0.0,"Open Breakout Sell Order");
-            if (ticket != -1) {
-               if (OrderSelect(ticket,SELECT_BY_TICKET) == true) {
-                  // Take Profit is the dollar value of $1 over cost, the TP * 100 * Point formats to the currency price
-                  double TP = profit + MathAbs(OrderCommission())+MathAbs(OrderSwap());
-                  if (OrderModify(ticket,OrderOpenPrice(),OrderStopLoss(),NormalizeDouble(OrderOpenPrice()-(TP * 100 * Point),Digits),0) == true) {
-                     Sleep(WaitBeforeNextTrade);
+            if (EnableBreakOutSELL == true) {
+               ticket = OrderSend(Symbol(),OP_SELL,lots,Bid,0,0.0,0.0,"Open Breakout Sell Order");
+               if (ticket != -1) {
+                  if (OrderSelect(ticket,SELECT_BY_TICKET) == true) {
+                     // Take Profit is the dollar value of $1 over cost, the TP * 100 * Point formats to the currency price
+                     double TP = profit + MathAbs(OrderCommission())+MathAbs(OrderSwap());
+                     if (OrderModify(ticket,OrderOpenPrice(),OrderStopLoss(),NormalizeDouble(OrderOpenPrice()-(TP * 100 * Point),Digits),0) == true) {
+                        Sleep(WaitBeforeNextTrade);
+                     }
                   }
+                  // Don't permit new trades once there is an open trade
+                  AllowNewTrades = false;
                }
-               // Don't permit new trades once there is an open trade
-               AllowNewTrades = false;
             }
             break;
          case COUNTER_UP:
-            ticket = OrderSend(Symbol(),OP_BUY,lots,Ask,0,0.0,0.0,"Open Counter Buy Order");
-            if (ticket != -1) {
-               if (OrderSelect(ticket,SELECT_BY_TICKET) == true) {
-                  // Take Profit is the dollar value of $1 over cost, the TP * 100 * Point formats to the currency price
-                  double TP = profit + MathAbs(OrderCommission())+MathAbs(OrderSwap());
-                  if (OrderModify(ticket,OrderOpenPrice(),OrderStopLoss(),NormalizeDouble(OrderOpenPrice()+(TP * 100 * Point),Digits),0) == true) {
-                     Sleep(WaitBeforeNextTrade);
+            if (EnableBreakOutBUY == true) {
+               ticket = OrderSend(Symbol(),OP_BUY,lots,Ask,0,0.0,0.0,"Open Counter Buy Order");
+               if (ticket != -1) {
+                  if (OrderSelect(ticket,SELECT_BY_TICKET) == true) {
+                     // Take Profit is the dollar value of $1 over cost, the TP * 100 * Point formats to the currency price
+                     double TP = profit + MathAbs(OrderCommission())+MathAbs(OrderSwap());
+                     if (OrderModify(ticket,OrderOpenPrice(),OrderStopLoss(),NormalizeDouble(OrderOpenPrice()+(TP * 100 * Point),Digits),0) == true) {
+                        Sleep(WaitBeforeNextTrade);
+                     }
                   }
+                  // Don't permit new trades once there is an open trade
+                  AllowNewTrades = false;
                }
-               // Don't permit new trades once there is an open trade
-               AllowNewTrades = false;
             }
             break;
          case COUNTER_DOWN:
-            ticket = OrderSend(Symbol(),OP_SELL,lots,Bid,0,0.0,0.0,"Open Counter Sell Order");
-            if (ticket != -1) {
-               if (OrderSelect(ticket,SELECT_BY_TICKET) == true) {
-                  // Take Profit is the dollar value of $1 over cost, the TP * 100 * Point formats to the currency price
-                  double TP = profit + MathAbs(OrderCommission())+MathAbs(OrderSwap());
-                  if (OrderModify(ticket,OrderOpenPrice(),OrderStopLoss(),NormalizeDouble(OrderOpenPrice()-(TP * 100 * Point),Digits),0) == true) {
-                     Sleep(WaitBeforeNextTrade);
+            if (EnableCounterSELL == true) {
+               ticket = OrderSend(Symbol(),OP_SELL,lots,Bid,0,0.0,0.0,"Open Counter Sell Order");
+               if (ticket != -1) {
+                  if (OrderSelect(ticket,SELECT_BY_TICKET) == true) {
+                     // Take Profit is the dollar value of $1 over cost, the TP * 100 * Point formats to the currency price
+                     double TP = profit + MathAbs(OrderCommission())+MathAbs(OrderSwap());
+                     if (OrderModify(ticket,OrderOpenPrice(),OrderStopLoss(),NormalizeDouble(OrderOpenPrice()-(TP * 100 * Point),Digits),0) == true) {
+                        Sleep(WaitBeforeNextTrade);
+                     }
                   }
+                  // Don't permit new trades once there is an open trade
+                  AllowNewTrades = false;
                }
-               // Don't permit new trades once there is an open trade
-               AllowNewTrades = false;
             }
             break;
          case UNKNOWN: // Also a sideways market
