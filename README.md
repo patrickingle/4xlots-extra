@@ -33,6 +33,10 @@ number only.
 
 5. Begin using 4xlots API is your Expert Advisors or other Forex trading algorithms
 
+# Forex General Expert Advisor
+An updated version of the Forex General Expert Advisor has been included under the Experts directory.
+This EA used the Metatrader Bridge API available at https://sourceforge.net/projects/mtbridge/
+
 # Results
 
 File: <a href="Results/Demo/DetailedStatement.pdf">Results/Demo/DetailedStatement.pdf</a>
