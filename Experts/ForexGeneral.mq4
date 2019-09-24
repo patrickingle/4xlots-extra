@@ -1,47 +1,75 @@
 //+------------------------------------------------------------------+
 //|                                                 ForexGeneral.mq4 |
-//|                                    Copyright 2018, RedeeCash LTD |
-//|                                        https://forexgeneral.info |
+//|        Copyright 2019, PressPage Entertainment Inc DBA RedeeCash |
+//|                                    https://www.forexgeneral.info |
 //+------------------------------------------------------------------+
-#property copyright "Copyright 2018, RedeeCash LTD"
-#property link      "https://forexgeneral.info"
+#property copyright "Copyright 2019, PressPage Entertainment Inc DBA RedeeCash"
+#property link      "https://www.forexgeneral.info"
 #property version   "1.00"
 #property strict
 
-#include <ForexGeneral.mqh>
+#include <4xlots.mqh>
+#include <mql4-http.mqh>
 
+//
+// Metatrader Error Messages
+//
+#define ERR_NO_ERROR                      0 //No error returned. 
+#define ERR_NO_RESULT                     1 //No error returned, but the result is unknown. 
+#define ERR_COMMON_ERROR                  2 //Common error. 
+#define ERR_INVALID_TRADE_PARAMETERS      3 //Invalid trade parameters. 
+#define ERR_SERVER_BUSY                   4 //Trade server is busy. 
+#define ERR_OLD_VERSION                   5 //Old version of the client terminal. 
+#define ERR_NO_CONNECTION                 6 //No connection with trade server. 
+#define ERR_NOT_ENOUGH_RIGHTS             7 //Not enough rights. 
+#define ERR_TOO_FREQUENT_REQUESTS         8 //Too frequent requests. 
+#define ERR_MALFUNCTIONAL_TRADE           9 //Malfunctional trade operation. 
+#define ERR_ACCOUNT_DISABLED              64 //Account disabled. 
+#define ERR_INVALID_ACCOUNT               65 //Invalid account. 
+#define ERR_TRADE_TIMEOUT                 128 //Trade timeout. 
+#define ERR_INVALID_PRICE                 129 //Invalid price. 
+#define ERR_INVALID_STOPS                 130 //Invalid stops. 
+#define ERR_INVALID_TRADE_VOLUME          131 //Invalid trade volume. 
+#define ERR_MARKET_CLOSED                 132 //Market is closed. 
+#define ERR_TRADE_DISABLED                133 //Trade is disabled. 
+#define ERR_NOT_ENOUGH_MONEY              134 //Not enough money. 
+#define ERR_PRICE_CHANGED                 135 //Price changed. 
+#define ERR_OFF_QUOTES                    136 //Off quotes. 
+#define ERR_BROKER_BUSY                   137 //Broker is busy. 
+#define ERR_REQUOTE                       138 //Requote. 
+#define ERR_ORDER_LOCKED                  139 //Order is locked. 
+#define ERR_LONG_POSITIONS_ONLY_ALLOWED   140 //Long positions only allowed. 
+#define ERR_TOO_MANY_REQUESTS             141 //Too many requests. 
+#define ERR_TRADE_MODIFY_DENIED           145 //Modification denied because order too close to market. 
+#define ERR_TRADE_CONTEXT_BUSY            146 //Trade context is busy. 
+#define ERR_TRADE_EXPIRATION_DENIED       147 //Expirations are denied by broker. 
+#define ERR_TRADE_TOO_MANY_ORDERS         148 //The amount of open and pending orders has reached the limit set by the broker. 
 
 //
 // External - User variables
 //
 //extern bool    Debug    = false;
+extern string  MTBridgeURL        = "http://localhost:3000/";
 extern bool    TradeEnabled       = true;
 extern double  MinEquity          = 0;
 extern double  MinimumProfit      = 2;
 extern bool    MoneyManagement    = false;
 extern double  Risk               = 2.5;
 extern bool    Hedge              = false;
-// Increases the trend side lots by this multple for a hedge trade
-extern double  HedgeMultiple      = 2;       
-// 0=low [<0.63%],1=medium[<0.77%],2=high
-extern int     HedgeRisk          = 0;       
-// One trade open at a time per currency
-extern bool    OTS                = false;   
-// One trade open at a time for all currencies/charts
-extern bool    OTG                = false;   
-// The maximum lots   
-extern double  MaxLots            = 1000;    
-// value is in seconds (660=10 mins; 172800=48 hrs[2 days]
-extern datetime   Expiry             = 172800;  
-extern int  slippage           = 10;
+extern double  HedgeMultiple      = 2;       // Increases the trend side lots by this multple for a hedge trade
+extern int     HedgeRisk          = 0;       // 0=low [<0.63%],1=medium[<0.77%],2=high
+extern bool    OTS                = false;   // One trade open at a time per currency
+extern bool    OTG                = false;    // One trade open at a time for all currencies/charts
+extern double  MaxLots            = 1000;    // The maximum lots  
+extern double  Expiry             = 172800;  // value is in seconds (660=10 mins; 172800=48 hrs[2 days]
+extern int     slippage           = 10;
 extern double  TrailingStop       = 50;
 //extern bool    AdjustStops        = true;
 extern string  name               = "4XITE";
-// turns on voice confirmation after each trade
-extern bool    voice_confirmation = false;     
-extern string  Currency1          = "AUDJPYFXF";
-extern string  Currency2          = "CADJPYFXF";
-extern string  Currency3          = "AUDCADFXF";
+extern bool    voice_confirmation = false;     // turns on voice confirmation after each trade
+extern string  Currency1          = "AUDJPYi";
+extern string  Currency2          = "CADJPYi";
+extern string  Currency3          = "AUDCADi";
 
 //
 // Internal variables
@@ -63,8 +91,7 @@ double   StopLevel;
 int      MagicNumber;
 string   MagicName;
 
-// default to a (-1) as the DLL-API does no operation if this value is passed by mistake.
-int session=-1; 
+double   session=-1; 
 
 string   GlobalNamePrefix = "4xite_";
 string   GlobalNameRandomNumber;
@@ -78,65 +105,56 @@ int OnInit()
   {
 //--- create timer
    EventSetTimer(60);
-
-   Print(GetVersion());
+   
+   Print(GetDllVersion());
 
    if (AccountEquity() < MinEquity) {
       Print("Trading is disabled for account balances less than $1000");
       Alert("Trading is disabled. See journal");
-      StopScript();
-      return(-1);
+      ExpertRemove();
+      return(INIT_FAILED);
    }
 
    if (name == "") {
       Print("Your Name Must be provided to activate Forex Raptor Freeware");
       Alert("You must provide your name");
-      StopScript();
-      return(-1);
+      ExpertRemove();
+      return(INIT_FAILED);
    }
    
    if (Expiry < 660) {
       Print("Expiration cannot be set less than 660 seconds (must be > 11 minutes).");
       Alert("Expiration must be > 660 seconds");
-      StopScript();
-      return(-1);
+      ExpertRemove();
+      return(INIT_FAILED);
    }
    
    if (MaxLots < 0) {
       Print("Maximum lots must be greater than zero");
       Alert("Maximum lots must be greater than zero");
-      StopScript();
-      return(-1);
+      ExpertRemove();
+      return(INIT_FAILED);
    }
    
    if (HedgeMultiple < 1) {
       Print("Hedge multiple cannot be less than 1");
       Alert("Hedge multiple cannot be less than 1");
-      StopScript();
-      return(-1);
-   }
-   
-   if (voice_confirmation == true) {
-      Print("Voice confirmation is enabled");
-   } else {
-      Print("Voice confirmation is turned off");
+      ExpertRemove();
+      return(INIT_FAILED);
    }
    
    if (IsTradeAllowed() == false) {
+      ExpertRemove();
       Print("Trading is not permitted");
-      StopScript();
    }
-
-   // Must initialize a session with the DLL-API to hold transfer/trade parameters between MT4
-   //    and Forex Raptor Freeware windows application.
-   session = FindExistingSession(AccountNumber(),WindowHandle(Symbol(),0),Symbol());
+   
+   session = FindExistingSession(AccountNumber(),Symbol(),ChartGetInteger(0,CHART_WINDOW_HANDLE));
    if (session == 0) {
-      //session = Initialize(AccountNumber(),WindowHandle(Symbol(),0),Symbol());
-      session = Initialize(AccountNumber(),WindowHandle(Symbol(),0),Symbol(),Currency1,Currency2,Currency3);
+      session = StringToDouble(Initialize(AccountNumber(),ChartGetInteger(0,CHART_WINDOW_HANDLE),Symbol(),Currency1,Currency2,Currency3));
       if (session == -1) {
-         Alert("Maximum Allowable Sessions reached. Stopping Expert!");
-         StopScript();
-         return(-1);
+         Alert("Maximum Allowable Sessions reached. Removing Expert!");
+         ExpertRemove();
+         return(INIT_FAILED);
       } else {
          Print("Opening new Session # ",session);
       }
@@ -197,14 +215,8 @@ int OnInit()
    SetBidAsk(session,Bid,Ask,Close[0],Volume[0]);
    
    SendResponse(session,0,0,"Session started successfully",0);
-
-   if (voice_confirmation == true) {
-      msg = "Forex General is now ready on " + CurrencyToSpeech();
-      gSpeak(msg, -10, 100);
-   }
    
    StopLevel = MarketInfo(Symbol(), MODE_STOPLEVEL) + MarketInfo(Symbol(), MODE_SPREAD);
-   
    
    if (MagicNumber == 0) {
        GlobalNameRandomNumber = StringConcatenate(GlobalNamePrefix,"index");
@@ -216,8 +228,7 @@ int OnInit()
    SetSwapRateLong(session,MarketInfo(Symbol(),MODE_SWAPLONG));
    SetSwapRateShort(session,MarketInfo(Symbol(),MODE_SWAPSHORT));
    
-   Alert(StringConcatenate("Forex General on ",Symbol()," is ready for trading"));   
-      
+   Alert(StringConcatenate("Forex General on ",Symbol()," is ready for trading"));
 //---
    return(INIT_SUCCEEDED);
   }
@@ -233,15 +244,10 @@ void OnDeinit(const int reason)
    
    if (DeInitialize(session) != 0) {
       Print(Symbol()," was not properly deinitialize. Session count=",GetSessionCount());
-      msg = "four rex general could not be removed for " + CurrencyToSpeech();
    } else {
       Print(Symbol()," deinitialized successfully! Session count=", GetSessionCount());
-      msg = "four rex general has been successfully removed for " + CurrencyToSpeech();
    }   
-   if (voice_confirmation == true) gSpeak(msg, -10, 100);
-   
-   GlobalVariablesDeleteAll(GlobalNamePrefix);
-         
+  
   }
 //+------------------------------------------------------------------+
 //| Expert tick function                                             |
@@ -250,10 +256,10 @@ void OnTick()
   {
 //---
    double price=0,lots=0,stoploss=0,takeprofit=0;
-   string ccypair;
+   string ccypair="";
    //double askprice,buyprice;
-   datetime expiration=0;
-   int i,ticket;
+   datetime expiration = NULL;
+   int i=0,ticket=0;
    int errnum=0;
    
    if (session == -1) return;
@@ -266,7 +272,7 @@ void OnTick()
       lots = GetTradeLots(session);
       stoploss = GetTradeStoploss(session);
       takeprofit = GetTradeTakeprofit(session);
-      expiration = TimeCurrent() + Expiry;
+      expiration = TimeCurrent() + StrToTime(DoubleToStr(Expiry));
       ticket = 0;
       DecrementQueuePosition(session);
       
@@ -282,8 +288,7 @@ void OnTick()
       if (OTG == true) {
          if (OrdersTotal() > 0) {
             for (i=0;i<OrdersTotal();i++) {
-               if (OrderSelect(i,SELECT_BY_POS,MODE_TRADES) == true) 
-               {
+               if (OrderSelect(i,SELECT_BY_POS,MODE_TRADES)) {
                   if (OrderMagicNumber() == MagicNumber) {
                      TrailOrder(); 
                      // update the balanace, equity info   
@@ -292,6 +297,8 @@ void OnTick()
                      ResetTradeCommand(session);
                      return;
                   }
+               } else {
+                  SendResponse(session,GetLastError(),0,"Error when selecting order",i);
                }
             }
             SendResponse(session,0,0,"One Trade Globally (OTG) is ACTIVE. Trade rejected other trades opened.",0);
@@ -299,8 +306,7 @@ void OnTick()
       } else if (OTS == true) {
          //int tmp;
          for (i=0;i<OrdersTotal();i++) {
-            if (OrderSelect(i,SELECT_BY_POS,MODE_TRADES) == true)
-            {
+            if (OrderSelect(i,SELECT_BY_POS,MODE_TRADES)) {
                if (OrderMagicNumber() == MagicNumber) {
                   TrailOrder(); 
                   // update the balanace, equity info   
@@ -309,12 +315,14 @@ void OnTick()
                   ResetTradeCommand(session);
                   return;            
                }
+            } else {
+               SendResponse(session,GetLastError(),0,"Error when selecting order",i);
             }
          }
       }
 
       if (AccountEquity() < MinEquity) {
-         SendResponse(session,0,0,"Trading temporarily disabled when equity is less than user-defined minimum of "+DoubleToString(MinEquity)+". Trade discarded!",0);
+         SendResponse(session,0,0,"Trading temporarily disabled when equity is less than user-defined minimum of "+ DoubleToString(MinEquity) +". Trade discarded!",0);
          Print("Trading temporarily disabled when equity is less than user-defined minimum. Trade discarded!");
          return;
       }
@@ -325,8 +333,7 @@ void OnTick()
       double MinLot = MarketInfo(Symbol(),MODE_MINLOT);
 
       if (MoneyManagement) {
-         Leverage=AccountLeverage();
-         lots=MathFloor((AccountBalance()*Risk*(Leverage/100))/LotsSize*MinLot)*MinLot;
+         lots = LotsOptimize(Deposit,Preserve);
       } else {
          if (lots > MaxLot) lots = MaxLot;
          if (lots < MinLot) lots = MinLot;
@@ -383,12 +390,8 @@ void OnTick()
                if (ticket == -1) {
                   errnum = GetLastError();
                   Print(ErrorDescription(errnum)," for Market Buy => price=",price,", lots=",lots,", stoploss=",stoploss,", takeprofit=",takeprofit,", expiration=",TimeToStr(expiration)); 
-                  msg = "error on market buy for " + CurrencyToSpeech();
-               } else {
-                  msg = "market buy on " + CurrencyToSpeech(); 
                }
                CheckForError(ticket,errnum,"Market Trade accepted.");
-               if (voice_confirmation == true) gSpeak(msg, -10, 100);
             }
             break;
          case OP_SELL:
@@ -411,12 +414,8 @@ void OnTick()
                if (ticket == -1) {
                   errnum = GetLastError();
                   Print(ErrorDescription(errnum)," for Market Sell => price=",price,", lots=",lots,", stoploss=",stoploss,", takeprofit=",takeprofit,", expiration=",TimeToStr(expiration)); 
-                  msg = "error on market sell for " + CurrencyToSpeech();
-               } else {
-                  msg = "market sell on " + CurrencyToSpeech(); 
                }
                CheckForError(ticket,errnum,"Market Trade accepted.");
-               if (voice_confirmation == true) gSpeak(msg, -10, 100);
             }
             break;
          case OP_BUYLIMIT:
@@ -439,13 +438,9 @@ void OnTick()
                if (ticket == -1) {
                   errnum = GetLastError();
                   Print(ErrorDescription(errnum)," for Buy Limit => price=",price,", lots=",lots,", stoploss=",stoploss,", takeprofit=",takeprofit,", expiration=",TimeToStr(expiration)); 
-                  msg = "error on buy limit for " + CurrencyToSpeech();
-               } else {
-                  msg = "buy limit on " + CurrencyToSpeech(); 
                }
                Print("BUYLIMIT: session=",session,", cmd=",cmd,", price=",price,", lots=",lots,", stoploss=",stoploss,", takeprofit=",takeprofit);
                CheckForError(ticket,errnum,"Entry Buy Limit Trade accepted.");
-               if (voice_confirmation == true) gSpeak(msg, -10, 100);
             }
             break;
          case OP_BUYSTOP:
@@ -468,12 +463,8 @@ void OnTick()
                if (ticket == -1) {
                   errnum = GetLastError();
                   Print(ErrorDescription(errnum)," for Buy Stop => price=",price,", lots=",lots,", stoploss=",stoploss,", takeprofit=",takeprofit,", expiration=",TimeToStr(expiration)); 
-                  msg = "error on buy stop for " + CurrencyToSpeech();
-               } else {
-                  msg = "buy stop on " + CurrencyToSpeech(); 
                }
                CheckForError(ticket,errnum,"Entry Buy Stop Trade accepted.");
-               if (voice_confirmation == true) gSpeak(msg, -10, 100);
             }
             break;
          case OP_SELLLIMIT:
@@ -496,12 +487,8 @@ void OnTick()
                if (ticket == -1) {
                   errnum = GetLastError();
                   Print(ErrorDescription(errnum)," for Sell Limit => price=",price,", lots=",lots,", stoploss=",stoploss,", takeprofit=",takeprofit,", expiration=",TimeToStr(expiration)); 
-                  msg = "error on sell limit for " + CurrencyToSpeech();
-               } else {
-                  msg = "sell limit on " + CurrencyToSpeech(); 
                }
                CheckForError(ticket,errnum,"Entry Sell Limit Trade accepted.");
-               if (voice_confirmation == true) gSpeak(msg, -10, 100);
             }
             break;
          case OP_SELLSTOP:
@@ -524,12 +511,8 @@ void OnTick()
                if (ticket == -1) {
                   errnum = GetLastError();
                   Print(ErrorDescription(errnum)," for Sell Stop => price=",price,", lots=",lots,", stoploss=",stoploss,", takeprofit=",takeprofit,", expiration=",TimeToStr(expiration)); 
-                  msg = "error on sell stop for " + CurrencyToSpeech();
-               } else {
-                  msg = "sell stop on " + CurrencyToSpeech(); 
                }
                CheckForError(ticket,errnum,"Entry Sell Stop Trade accepted.");
-               if (voice_confirmation == true) gSpeak(msg, -10, 100);
             }
             break;
          default:
@@ -610,8 +593,10 @@ void OnTick()
          for (i=0;i<OrdersTotal();i++) {
             if (OrderSelect(i,SELECT_BY_POS,MODE_TRADES) == true) {
                if (OrderMagicNumber() == MagicNumber) {
-                  if (OrderClose(OrderTicket(),OrderLots(),OrderClosePrice(),slippage,0))
-                  {
+                  if (!OrderClose(OrderTicket(),OrderLots(),OrderClosePrice(),slippage,0)){
+                     SendResponse(session,GetLastError(),0,"Error when closing order",OrderTicket());
+                  } else {
+                     SendResponse(session,0,0,"Successfull in closing order",OrderTicket());
                   }
                }
             }
@@ -624,8 +609,10 @@ void OnTick()
          for (i=0;i<OrdersTotal();i++) {
             if (OrderSelect(i,SELECT_BY_POS,MODE_TRADES) == true) {
                if (OrderMagicNumber() == MagicNumber) {
-                  if (OrderClose(OrderTicket(),OrderLots(),OrderClosePrice(),slippage,0))
-                  {
+                  if (!OrderClose(OrderTicket(),OrderLots(),OrderClosePrice(),slippage,0)) {
+                     SendResponse(session,GetLastError(),0,"Error when closing order",OrderTicket());
+                  } else {
+                     SendResponse(session,0,0,"Successfull in closing order",OrderTicket());
                   }
                }
             }
@@ -676,6 +663,7 @@ void OnChartEvent(const int id,
 //---
    
   }
+//+------------------------------------------------------------------+
 
 //
 // Send Order - put this in a separate function to produce a delay as not all orders were being opened.
@@ -693,24 +681,16 @@ int SendOrder(string ccypair,int cmd,double lots) {
                if (ticket == -1) {
                   errnum = GetLastError();
                   Print(ErrorDescription(errnum)); 
-                  msg = "error on market buy for " + CurrencyToSpeech();
-               } else {
-                  msg = "market buy on " + CurrencyToSpeech(); 
                }
                CheckForError(ticket,errnum,"Market Trade accepted.");
-               if (voice_confirmation == true) gSpeak(msg, -10, 100);
                break;
             case OP_SELL:
                ticket = OrderSend(ccypair,cmd,lots,buyprice,slippage,0,0,"ArbCalc-MARKET_SELL",MagicNumber,0,Red);
                if (ticket == -1) {
                   errnum = GetLastError();
                   Print(ErrorDescription(errnum)); 
-                  msg = "error on market sell for " + CurrencyToSpeech();
-               } else {
-                  msg = "market sell on " + CurrencyToSpeech(); 
                }
                CheckForError(ticket,errnum,"Market Trade accepted.");
-               if (voice_confirmation == true) gSpeak(msg, -10, 100);
                break;
          }
       }
@@ -781,8 +761,12 @@ void TrailOrder()
          {
             if(OrderStopLoss()<Bid-(Point*TrailingStop))
             {
-               if (OrderModify(OrderTicket(),OrderOpenPrice(),Bid-(Point*TrailingStop),OrderTakeProfit(),0,Green)) 
-               {
+               if (!OrderModify(OrderTicket(),OrderOpenPrice(),Bid-(Point*TrailingStop),OrderTakeProfit(),0,Green)) {
+                  // Error
+                  SendResponse(session,GetLastError(),0,"Error when modifying order",OrderTicket());
+               } else {
+                  // Success
+                  SendResponse(session,0,0,"Successful in modifying order",OrderTicket());
                }
             }
          }
@@ -793,8 +777,12 @@ void TrailOrder()
          {
             if((OrderStopLoss()>(Ask+(Point*TrailingStop))) || (OrderStopLoss()==0))
             {
-               if (OrderModify(OrderTicket(),OrderOpenPrice(),Ask+(Point*TrailingStop),OrderTakeProfit(),0,Red))
-               {
+               if(!OrderModify(OrderTicket(),OrderOpenPrice(),Ask+(Point*TrailingStop),OrderTakeProfit(),0,Red)) {
+                  // Error
+                  SendResponse(session,GetLastError(),0,"Error when modifying order",OrderTicket());
+               } else {
+                  // Success
+                  SendResponse(session,0,0,"Successful in modifying order",OrderTicket());
                }
             }
          }
@@ -860,27 +848,112 @@ string ErrorDescription(int rcerror)
 }
 
 
-string CurrencyToSpeech() 
-{
-   if (Symbol() == "EURUSD") return ("euro dollar");
-   if (Symbol() == "USDCHF") return ("swissie");
-   if (Symbol() == "GBPUSD") return ("cable");
-   if (Symbol() == "USDJPY") return ("dollar yen");
-   if (Symbol() == "USDCAD") return ("green back mountie");
-   if (Symbol() == "NZDUSD") return ("kiwie");
-   if (Symbol() == "AUDUSD") return ("aussie");
-   if (Symbol() == "GBPJPY") return ("sterling yen");
-   if (Symbol() == "CHFJPY") return ("swiss yen");
-   if (Symbol() == "EURJPY") return ("euro yen");
-   if (Symbol() == "EURGBP") return ("euro sterling");
-   if (Symbol() == "EURCHF") return ("euro swiss");
-   if (Symbol() == "GBPCHF") return ("sterling swiss");
-   if (Symbol() == "AUDJPY") return ("aussie yen");
-   if (Symbol() == "EURCAD") return ("euro canadian");
-   if (Symbol() == "EURAUD") return ("euro aussie");
-   if (Symbol() == "AUDCAD") return ("aussie canadian");
-   if (Symbol() == "AUDNZD") return ("aussie kiwi");
-   if (Symbol() == "NZDJPY") return ("kiwi yen");
-   return("this currency pair");
-}  
+
 //+------------------------------------------------------------------+
+//
+// Metatrader API Bridge
+//
+//+------------------------------------------------------------------+
+string GetDllVersion() {
+   // http://localhost:4353/GetDllVersion
+   return httpGET(MTBridgeURL + "GetDllVersion");
+}
+
+string Initialize(int acctnum,long handle,string symbol,string ccy1,string ccy2,string ccy3){
+   return httpGET(MTBridgeURL + "Initialize/"+ IntegerToString(acctnum) +"."+ DoubleToString(handle) +"." + symbol + "." + ccy1 + "." + ccy2 + "." + ccy3);
+}
+string GetTradeCurrency(double _session){
+   return httpGET(MTBridgeURL + "GetTradeCurrency/" + DoubleToString(session));
+}
+string GetTradeCurrency2(double _session){
+   return httpGET(MTBridgeURL + "GetTradeCurrency2/" + DoubleToString(session));
+}
+string GetTradeCurrency3(double _session){
+   return httpGET(MTBridgeURL + "GetTradeCurrency3/" + DoubleToString(session));
+}
+
+int FindExistingSession(int acctnum,string symbol,long handle){
+   return StrToInteger(httpGET(MTBridgeURL + "FindExistingSession/" + IntegerToString(acctnum) + "." + symbol + "." + DoubleToString(handle)));
+}
+int DeInitialize(double _session){
+   return StrToInteger(httpGET(MTBridgeURL + "DeInitialize/" + DoubleToString(_session)));
+}
+int GetSessionCount(){
+   return StrToInteger(httpGET(MTBridgeURL + "GetSessionCount/"));
+}
+int SetBidAsk(double index,double bid,double ask,double close,double vol){
+   return StrToInteger(httpGET(MTBridgeURL + "SetBidAsk/" + DoubleToString(index) + "." + DoubleToString(bid) + "." + DoubleToString(ask) + "." + DoubleToString(close) + "." + DoubleToString(vol)));
+}
+int SaveAccountInfo(double _session,int number,double balance,double equity,int leverage){
+   return StrToInteger(httpGET(MTBridgeURL + "SaveAccountInfo/" + DoubleToString(_session) + "." + IntegerToString(number) + "." + DoubleToString(balance) + "." + DoubleToString(equity) + "." + DoubleToString(leverage)));
+}
+int SaveCurrencySessionInfo(double _session,string symbol,long handle,int period,int number){
+   return StrToInteger(httpGET(MTBridgeURL + "SaveCurrencySessionInfo/" + DoubleToString(_session) + "." + symbol + IntegerToString(handle) + "." + IntegerToString(period) + "." + IntegerToString(number)));
+}
+int DecrementQueuePosition(double _session){
+   return StrToInteger(httpGET(MTBridgeURL + "DecrementQueuePosition/" + DoubleToString(_session)));
+}
+int SaveMarketInfo(double _session,int number,int leverage,string symbol,double points,double digits,double spread,double stoplevel){
+   return StrToInteger(httpGET(MTBridgeURL + "SaveMarketInfo/" + DoubleToString(_session) + "." + IntegerToString(number) + "." + IntegerToString(leverage) + "." + symbol + "." + DoubleToString(points) + "." + DoubleToString(digits) + "." + DoubleToString(spread) + "." + DoubleToString(stoplevel)));
+}
+int SaveMarginInfo(double _session,string symbol,long handle,double margininit,double marginmaintenance,double marginhedged,double marginrequired,double margincalcmode){
+   return StrToInteger(httpGET(MTBridgeURL + "SaveMarginInfo/" + DoubleToString(_session) + "." + symbol + "." + IntegerToString(handle) + "." + DoubleToString(margininit) + "." + DoubleToString(marginmaintenance) + "." + DoubleToString(marginhedged) + "." + DoubleToString(marginrequired) + "." + DoubleToString(margincalcmode)));
+}
+int GetTradeOpCommand(double _session){
+   return StrToInteger(httpGET(MTBridgeURL + "GetTradeOpCommand/" + DoubleToString(_session)));
+}
+int GetTradeOpCommand1(double _session){
+   return StrToInteger(httpGET(MTBridgeURL + "GetTradeOpCommand1/" + DoubleToString(_session)));
+}
+int GetTradeOpCommand2(double _session){
+   return StrToInteger(httpGET(MTBridgeURL + "GetTradeOpCommand2/" + DoubleToString(_session)));
+}
+int GetTradeOpCommand3(double _session){
+   return StrToInteger(httpGET(MTBridgeURL + "GetTradeOpCommand3/" + DoubleToString(_session)));
+}
+int SaveHistory(double _session,string symbol,double &rates[][6],int rates_total,long handle){
+   return 0; //StrToInteger(httpGET(MTBridgeURL + "SaveHistory/" + DoubleToString(_session) + "." + symbol + "." + rates + "." + IntegerToString(rates_total) + "." + IntegerToString(handle)));
+}
+int SaveHistoryCcy1(double _session,string symbol,double &rates[][6],int rates_total,long handle){
+   return 0; //StrToInteger(httpGET(MTBridgeURL + "SaveHistoryCcy1/" + DoubleToString(_session) + "." + symbol + "." + rates + "." + IntegerToString(rates_total) + "." + IntegerToString(handle)));
+}
+int SaveHistoryCcy2(double _session,string symbol,double &rates[][6],int rates_total,long handle){
+   return 0; //StrToInteger(httpGET(MTBridgeURL + "SaveHistoryCcy2/" + DoubleToString(_session) + "." + symbol + "." + rates + "." + IntegerToString(rates_total) + "." + IntegerToString(handle)));
+}
+int SaveHistoryCcy3(double _session,string symbol,double &rates[][6],int rates_total,long handle){
+   return 0; //StrToInteger(httpGET(MTBridgeURL + "SaveHistoryCcy3/" + DoubleToString(_session) + "." + symbol + "." + rates + "." + IntegerToString(rates_total) + "." + IntegerToString(handle)));
+}
+double RetrieveHistoricalOpen(double _session,double index){
+   return StrToDouble(httpGET(MTBridgeURL + "RetrieveHistoricalOpen/" + DoubleToString(_session) + "." + DoubleToString(index)));
+}
+int SendResponse(double _session,int errorcode,int respcode,string message,int ticket){
+   return StrToInteger(httpGET(MTBridgeURL + "SendResponse/" + DoubleToString(_session) + "." + IntegerToString(errorcode) + "." + IntegerToString(respcode) + "." + message + "." + IntegerToString(ticket)));
+}
+double GetTradePrice(double _session){
+   return StrToDouble(httpGET(MTBridgeURL + "GetTradePrice/" + DoubleToString(_session)));
+}
+double GetTradeLots(double _session){
+   return StrToDouble(httpGET(MTBridgeURL + "GetTradeLots/" + DoubleToString(_session)));
+}
+double GetTradeLots2(double _session){
+   return StrToDouble(httpGET(MTBridgeURL + "GetTradeLots2/" + DoubleToString(_session)));
+}
+double GetTradeLots3(double _session){
+   return StrToDouble(httpGET(MTBridgeURL + "GetTradeLots3/" + DoubleToString(_session)));
+}
+double GetTradeStoploss(double _session){
+   return StrToDouble(httpGET(MTBridgeURL + "GetTradeStoploss/" + DoubleToString(_session)));
+}
+double GetTradeTakeprofit(double _session){
+   return StrToDouble(httpGET(MTBridgeURL + "GetTradeTakeprofit/" + DoubleToString(_session)));
+}
+void ResetTradeCommand(double _session){
+   httpGET(MTBridgeURL + "ResetTradeCommand/" + DoubleToString(_session));
+}
+void SetSwapRateLong(double _session,double swaprate){
+   httpGET(MTBridgeURL + "SetSwapRateLong/" + DoubleToString(_session) + "." + DoubleToString(swaprate));
+}
+void SetSwapRateShort(double _session,double swaprate){
+   httpGET(MTBridgeURL + "SetSwapRateShort/" + DoubleToString(_session) + "." + DoubleToString(swaprate));
+}
+   

@@ -1,9 +1,9 @@
 //+------------------------------------------------------------------+
 //|                                                       4xlots.mqh |
-//|                                  Copyright 2017, PHK Corporation |
+//|        Copyright 2019, PressPage Entertainment Inc DBA RedeeCash |
 //|                                           https://www.4xlots.com |
 //+------------------------------------------------------------------+
-#property copyright "Copyright 2011-2017, PHK Corporation"
+#property copyright "Copyright 2019, PressPage Entertainment Inc DBA RedeeCash"
 #property link      "https://www.4xlots.com"
 #property strict
 //+------------------------------------------------------------------+

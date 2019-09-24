@@ -1,10 +1,10 @@
 //+------------------------------------------------------------------+
 //|                                                    4xlotslib.mq4 |
-//|                             Copyright 2011-2017, PHK Corporation |
+//|        Copyright 2019, PressPage Entertainment Inc DBA RedeeCash |
 //|                                           https://www.4xlots.com |
 //+------------------------------------------------------------------+
 #property library
-#property copyright "Copyright 2011-2017, PHK Corporation"
+#property copyright "Copyright 2019, PressPage Entertainment Inc DBA RedeeCash"
 #property link      "https://www.4xlots.com"
 #property version   "2.00"
 #property strict

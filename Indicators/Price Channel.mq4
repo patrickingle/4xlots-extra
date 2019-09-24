@@ -1,10 +1,10 @@
 //+------------------------------------------------------------------+
 //|                                                Price Channel.mq4 |
-//|                                  Copyright 2017, PHK Corporation |
+//|        Copyright 2019, PressPage Entertainment Inc DBA RedeeCash |
 //|                                               https://4xlots.com |
 //+------------------------------------------------------------------+
  
-#property copyright "Copyright 2017, PHK Corporation"
+#property copyright "Copyright 2019, PressPage Entertainment Inc DBA RedeeCash"
 #property link      "https://4xlots.com"
 #property version   "1.00"
 #property strict

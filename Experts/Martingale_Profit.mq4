@@ -1,9 +1,9 @@
 //+------------------------------------------------------------------+
 //|                                            Martingale_Profit.mq4 |
-//|                                            phkcorp2005@gmail.com |
+//|        Copyright 2019, PressPage Entertainment Inc DBA RedeeCash |
 //|                                               https://4xlots.com |
 //+------------------------------------------------------------------+
-#property copyright "PHK Corporation"
+#property copyright "Copyright 2019, PressPage Entertainment Inc DBA RedeeCash"
 #property link      "https://4xlots.com"
 #property version   "1.00"
 #property strict
