@@ -860,7 +860,9 @@ string GetDllVersion() {
 }
 
 string Initialize(int acctnum,long handle,string symbol,string ccy1,string ccy2,string ccy3){
-   return httpGET(MTBridgeURL + "Initialize/"+ IntegerToString(acctnum) +"."+ DoubleToString(handle) +"." + symbol + "." + ccy1 + "." + ccy2 + "." + ccy3);
+   string url = MTBridgeURL + "Initialize/"+ IntegerToString(acctnum) +"."+ IntegerToString(handle) +"." + symbol + "." + ccy1 + "." + ccy2 + "." + ccy3;
+   Print(url);
+   return httpGET(url);
 }
 string GetTradeCurrency(double _session){
    return httpGET(MTBridgeURL + "GetTradeCurrency/" + DoubleToString(session));
@@ -873,7 +875,7 @@ string GetTradeCurrency3(double _session){
 }
 
 int FindExistingSession(int acctnum,string symbol,long handle){
-   return StrToInteger(httpGET(MTBridgeURL + "FindExistingSession/" + IntegerToString(acctnum) + "." + symbol + "." + DoubleToString(handle)));
+   return StrToInteger(httpGET(MTBridgeURL + "FindExistingSession/" + IntegerToString(acctnum) + "." + symbol + "." + IntegerToString(handle)));
 }
 int DeInitialize(double _session){
    return StrToInteger(httpGET(MTBridgeURL + "DeInitialize/" + DoubleToString(_session)));
