@@ -1,10 +1,10 @@
 //+------------------------------------------------------------------+
 //|                                                     trendlib.mq4 |
-//|        Copyright 2019, PressPage Entertainment Inc DBA RedeeCash |
+//|   Copyright 2019-2020, PressPage Entertainment Inc DBA RedeeCash |
 //|                                               https://4xlots.com |
 //+------------------------------------------------------------------+
 #property library
-#property copyright "Copyright 2019, PressPage Entertainment Inc DBA RedeeCash"
+#property copyright "Copyright 2019-2020, PressPage Entertainment Inc DBA RedeeCash"
 #property link      "https://4xlots.com"
 #property version   "1.01"
 #property strict
@@ -28,10 +28,10 @@
  
  // Phases of a Trade: Consolidation, Accumulation, Distribution, Participation (or Public Participation)
 
-//+------------------------------------------------------------------+
-//| TrendDirection                                                   |
-//| 0=Down, 1=Up, 2=Unknown/Sideways, 3=Breakout-UP, 4=Breakout-DN   |
-//+------------------------------------------------------------------+
+//+----------------------------------------------------------------------------------------------+
+//| TrendDirection                                                                               |
+//| 0=Down, 1=Up, 2=Unknown/Sideways, 3=Breakout-UP, 4=Breakout-DN, 5=Counter-UP, 6=Counter-DN   |
+//+----------------------------------------------------------------------------------------------+
 Trend TrendDirection() export
 {
    static Trend trend = UNKNOWN;

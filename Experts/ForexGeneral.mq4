@@ -1,9 +1,9 @@
 //+------------------------------------------------------------------+
 //|                                                 ForexGeneral.mq4 |
-//|        Copyright 2019, PressPage Entertainment Inc DBA RedeeCash |
+//|   Copyright 2019-2020, PressPage Entertainment Inc DBA RedeeCash |
 //|                                    https://www.forexgeneral.info |
 //+------------------------------------------------------------------+
-#property copyright "Copyright 2019, PressPage Entertainment Inc DBA RedeeCash"
+#property copyright "Copyright 2019-2020, PressPage Entertainment Inc DBA RedeeCash"
 #property link      "https://www.forexgeneral.info"
 #property version   "1.00"
 #property strict
