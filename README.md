@@ -1,5 +1,5 @@
 # 4xlots-extra
-Extra files for use with 4xlots Forex RIsk Management Web Service, see https://4xlots.com for more information
+Extra files for use with 4xlots Forex Risk Management Web Service, see https://4xlots.com for more information
 
 # Relevance List of Files
 

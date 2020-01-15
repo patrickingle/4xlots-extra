@@ -6,7 +6,7 @@
 #property library
 #property copyright "Copyright 2019, PressPage Entertainment Inc DBA RedeeCash"
 #property link      "https://4xlots.com"
-#property version   "1.00"
+#property version   "1.01"
 #property strict
 
 #include <trend.mqh>
@@ -118,16 +118,16 @@ Trend TrendDirection() export
          } else if (Close[0] > r1) {
             trend = UP;
          } else {
-            trend = UNKNOWN;
+            trend = SIDEWAYS;
          }
       }
       // OSC<0 while TREND=UP then TREND=COUNTER_DOWN
       // OSC>0 while TREND=DOWN then TREND=COUNTER_UP
       // OSC<0 while TREND=DOWN confirms TREND=DOWN
       // OSC>0 while TREND=UP confirms TREND=UP
-      if (osc < 0 && (trend == BREAKOUT_UP || trend == UNKNOWN)) {
+      if (osc < 0 && (trend == BREAKOUT_UP || trend == SIDEWAYS)) {
          trend = COUNTER_DOWN;
-      } else if (osc > 0 && (trend == BREAKOUT_DOWN || trend == UNKNOWN)) {
+      } else if (osc > 0 && (trend == BREAKOUT_DOWN || trend == SIDEWAYS)) {
          trend = COUNTER_UP;
       }
    }
@@ -147,8 +147,8 @@ string TrendDescription(Trend direction) export
       case UP:
          return ("Trend is UP");
          break;
-      case UNKNOWN:
-         return ("Trend is UNKNOWN");
+      case SIDEWAYS:
+         return ("Trend is SIDEWAYS");
          break;
       case BREAKOUT_UP:
          return ("Breakout on UP");

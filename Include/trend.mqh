@@ -5,6 +5,7 @@
 //+------------------------------------------------------------------+
 #property copyright "Copyright 2019, PressPage Entertainment Inc DBA RedeeCash"
 #property link      "https://4xlots.com"
+#property version   "1.01"
 #property strict
 
 enum TrendStrength
@@ -18,7 +19,7 @@ enum Trend
 {
    DOWN=0,
    UP=1,
-   UNKNOWN=3,
+   SIDEWAYS=3,
    BREAKOUT_UP=4,
    BREAKOUT_DOWN=5,
    COUNTER_UP=6,
